@@ -11,14 +11,14 @@ int sockfd;
 int newsockfd;
 
 void exitSignalHandler( int sig_num ){
-	close(newsockfd);
+	close(newsockfd); 
 	close(sockfd);	
 	printf("Server socket closed\n");
 	exit(0);
 }
 
 int main( int argc, char** argv ){
-
+	signal(SIGINT, exitSignalHandler);
 	printf("wtfserver\n");
 	
 	int port = -1;	
@@ -37,13 +37,11 @@ int main( int argc, char** argv ){
 	}
 	printf("server: running...\n");
 	
-	//struct sockaddr_in serverAddress = (struct sockaddr_in)malloc(sizeof(struct sockaddr_in));
 	struct sockaddr_in serverAddress;
 	serverAddress.sin_family = AF_INET;
 	serverAddress.sin_addr.s_addr = INADDR_ANY;
 	serverAddress.sin_port = htons(port);
 
-	//bind	
 	if( bind(sockfd,(struct sockaddr*) &serverAddress, sizeof(serverAddress)) < 0 ){
 		printf("Error: Can't bind.\n"); return 1;
 	}
@@ -53,30 +51,27 @@ int main( int argc, char** argv ){
 	struct sockaddr_in clientAddress;
 	socklen_t clientLen = sizeof(clientAddress);
 	
-	newsockfd = accept(sockfd, (struct sockaddr *) &clientAddress, &clientLen);
-	if(newsockfd<0){
-		printf("Error: Accept failed.\n"); return 1;
-	}
-	
-	printf("new client accepted...\n");
-	
-	
-	char buffer[255];
-	signal(SIGINT, exitSignalHandler);
+	char buffer[255]; //temporary
+
+	pid_t childpid;
 	while(1){
+		newsockfd = accept(sockfd, (struct sockaddr *) &clientAddress, &clientLen);
+		if(newsockfd<0){
+			printf("Error: Accept failed.\n"); return 1;
+		}
+		printf("new client accepted...\n");
 		
-		int code = read(newsockfd, buffer, 255);	
-
-		printf("From Client: %s\n", buffer);
-		
-		
-		printf("To Client: ");
-		fgets(buffer, 255, stdin);
-		code = write(newsockfd, buffer, strlen(buffer));
-
-		
+		if((childpid = fork())==0){
+			close(sockfd);
+			while(1){
+				read(newsockfd, buffer, 255);	
+				printf("From Client#: %s\n", buffer);
+				//printf("To Client: ");
+				//fgets(buffer, 255, stdin);
+				write(newsockfd, "Recieved", 8);
+			}
+		}
 	}
-	
 	
 	return 0;	
 }

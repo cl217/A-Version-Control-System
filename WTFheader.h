@@ -11,7 +11,9 @@
 #include <unistd.h>
 #include <signal.h>
 
+
 /*
+#include <arpa/inet.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
@@ -19,7 +21,8 @@
 #include <libgen.h>
 */
 
-
+/** wtfclient.c **/
+void wtfconnect();
 
 
 

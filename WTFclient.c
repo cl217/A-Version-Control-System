@@ -18,26 +18,44 @@ void exitSignalHandler( int sig_num ){
 
 
 int main( int argc, char** argv ){
- 
  	printf("wtfclient\n");
-	
-	int port = -1;
-	if(argc<3){
-		printf("Error: invalid args\n"); return 1;
-	}else{
-		port = atoi(argv[2]);
-	}
+ 	
+ 	//Ctrl-C handler, closes ports before ending program
+	signal(SIGINT, exitSignalHandler); 
 	
 
-	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	
+	/** Testing Purposes **/
+	wtfconnect();
+	char buffer[255];
+	while(1){ //TODO: close on server shut down?
+	
+		printf("To Server: ");
+		fgets(buffer, 255, stdin);
+		write(sockfd, buffer, strlen(buffer));
+		
+		read(sockfd, buffer, 255);
+		printf("Server: %s\n", buffer);
+	}
+	
+	return 0;
+}
+
+/** Connect function for all commands that communicates with server**/
+void wtfconnect(){
+	//TODO: must fail if .configure file not found
+	
+	int port = atoi("2000"); //TODO: Port-change to get from .configure file
+	
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if(sockfd<0){
-		printf("Error: can't open socket\n"); return 1;
+		printf("Error: can't open socket\n"); exit(1);
 	}
 	printf("Status: new client created\n");
 		
-	struct hostent* server = gethostbyname(argv[1]);
+	struct hostent* server = gethostbyname("127.0.0.1"); //TODO: IP-change to get from .configure file
 	if(server==NULL){
-		printf("Error: host not found\n"); return 1;
+		printf("Error: host not found\n"); exit(1);
 	}
 	printf("Status: host found\n");
 	
@@ -51,24 +69,36 @@ int main( int argc, char** argv ){
 	serverAddr.sin_port = htons(port);
 
 	if(connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr))<0){
-		printf("Error: connection failed\n"); return 1;
+		printf("Error: connection failed\n"); exit(1);
 	}
 	printf("Status: connected to server\n");
-	
-	
-	signal(SIGINT, exitSignalHandler);
-	char buffer[255];
-	while(1){ //TODO: close on server shut down
-	
-		printf("To Server: ");
-		fgets(buffer, 255, stdin);
-		int code=write(sockfd, buffer, strlen(buffer));
-
-		code = read(sockfd, buffer, 255);
-
-		printf("From Server: %s\n", buffer);
-	}
-	
-
-	return 0;
 }
+
+void wtfconfigure(int ip, int port){
+	//TODO: write out ip and port to ./.configure file
+}
+
+void wtfcheckout(){}
+
+void wtfupdate(){}
+
+void wtfupgrade(){}
+
+void wtfcommit(){}
+
+void wtfpush(){}
+
+void wtfcreate(){}
+
+void wtfdestroy(){}
+
+void wtfadd(){}
+
+void wtfremove(){}
+
+void wtfcurrentversion(){}
+
+void wtfhistory(){}
+
+void wtfrollback(){}
+
