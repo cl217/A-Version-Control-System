@@ -7,6 +7,10 @@
 	Port: 1024-9999
 */	
 
+/*
+	TODO: MUTEX
+*/
+
 int sockfd;
 int newsockfd;
 
