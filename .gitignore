@@ -1,5 +1,6 @@
 WTF
 WTFserver
+.nfs*
 
 # Prerequisites
 *.d
