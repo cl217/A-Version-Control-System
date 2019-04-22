@@ -1,19 +1,12 @@
 #include "WTFheader.h"
 
-
-/*
-	./WTFserver <port>
-	./WTFserver
-	Port: 1024-9999
-*/	
-
 /*
 	TODO: MUTEX
 */
 
 int sockfd;
 int newsockfd;
-
+ 
 void exitSignalHandler( int sig_num ){
 	close(newsockfd); 
 	close(sockfd);	
@@ -22,6 +15,7 @@ void exitSignalHandler( int sig_num ){
 }
 
 int main( int argc, char** argv ){
+
 	signal(SIGINT, exitSignalHandler);
 	printf("wtfserver\n");
 	
@@ -63,19 +57,67 @@ int main( int argc, char** argv ){
 		if(newsockfd<0){
 			printf("Error: Accept failed.\n"); return 1;
 		}
-		printf("new client accepted...\n");
+		printf("new client accepted...\n\n");
 		
 		if((childpid = fork())==0){
 			close(sockfd);
 			while(1){
-				read(newsockfd, buffer, 255);	
-				printf("From Client#: %s\n", buffer);
-				//printf("To Client: ");
-				//fgets(buffer, 255, stdin);
-				write(newsockfd, "Recieved", 8);
+				
+				//read in datasize from client
+				int readCode = -1;
+				int dataSize;
+				readCode = read(newsockfd, &dataSize, sizeof(int));
+				write(newsockfd, "1", 1);
+				
+				//read in data from client
+				char data[dataSize+1];
+				readCode = -1;
+				readCode = read(newsockfd, &data, dataSize);
+				data[dataSize]='\0';
+				write(newsockfd, "1", 1);
+				printf("data(%s)\n", data);
+				
+				struct node* dataList = splitData(data);  //TODO
+				
+				printf("81\n");
+				
+				
+				executeCommand(dataList);
 			}
 		}
 	}
-	
 	return 0;	
 }
+ 
+void executeCommand(struct node* dataList){
+
+	char* command; //get from datalist	
+	
+	if(strcmp(command, "checkout")==0){
+	
+	}else if(strcmp(command, "update")==0){
+	
+	}else if(strcmp(command, "upgrade")==0){
+
+	}else if(strcmp(command, "commit")==0){
+
+	}else if(strcmp(command, "push")==0){
+
+	}else if(strcmp(command, "create")==0){
+
+	}else if(strcmp(command, "destroy")==0){
+
+	}else if(strcmp(command, "currentversion")==0){
+
+	}else if(strcmp(command, "history")==0){
+
+	}else if(strcmp(command, "rollback")==0){
+
+	}else{
+		//should never happen
+	}
+}
+
+
+
+

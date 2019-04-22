@@ -22,6 +22,37 @@ void exitHandler(){
 	exit(0);
 }
 
+int sendToServer(char* data){
+
+	int size = strlen(data);
+	write(sockfd, &size, sizeof(int)); //send size of data
+	printf("datasize sent:\n");
+	getFromServer(); //get server acceptance response of datasize
+	printf("server confirmation recieved\n");
+	
+	
+	write(sockfd, data, size); //send data
+	printf("data sent: %s\n", data);
+	int code = getFromServer(); //get server acceptance response of data
+	printf("server confirmation recieved\n");
+	return code;
+	
+	//return getFromServer(); //returns server's code of command execution
+}
+
+//Server returns data to signal success(1)/failure(0)
+int getFromServer(){ 
+	char * code = (char*)malloc(2*sizeof(char));
+	int readCode = -1;
+	while(readCode < 0 ){
+		readCode = read(sockfd, code, 1);
+		code[1] = '\0';  
+		//TODO: if too loop takes too long
+			//failure to send
+			//exit
+	}
+	return atoi(code);
+}
 
 int main( int argc, char** argv ){
  	//Ctrl-C handler, closes ports before ending program
@@ -114,6 +145,7 @@ int main( int argc, char** argv ){
 		//printf("Error: invalid argv[1]\n");
 		
 		/** Testing Purposes **/
+		/*
 		wtfconnect();
 		char buffer[255];
 		while(1){ //TODO: close on server shut down?
@@ -125,6 +157,7 @@ int main( int argc, char** argv ){
 			read(sockfd, buffer, 255);
 			printf("Server: %s\n", buffer);
 		}
+		*/
 	}
 	
 	atexit(exitHandler);
@@ -140,19 +173,17 @@ void wtfconnect(){
 	
 	char* c = (char*)malloc(2*sizeof(char));
 	char* word = NULL;
-	int length = 0;
 	//READ IN IP
 	while( read(configFile, c, 1) > 0 && c[0] != '\n' ){
-		word = append(word, c, length);
-		length++;
+		c[1] = '\0';
+		word = append(word, c);
 	}
 	struct hostent* server = gethostbyname(word);
 	//READ IN PORT
-	length = 0;
 	word = NULL;
 	while( read(configFile, c, 1) > 0 ){
-		word = append(word, c, length);
-		length++;
+		c[1] = '\0';
+		word = append(word, c);
 	}
 	int port = atoi(word);
 	
@@ -178,8 +209,9 @@ void wtfconnect(){
 	serverAddr.sin_port = htons(port);
 	if(connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr))<0){
 		printf("Error: connection failed\n"); atexit(exitHandler);
+	}else{
+		printf("Status: connected to server\n");
 	}
-	printf("Status: connected to server\n");
 }
 
 void wtfconfigure( char* ip, char* port){
@@ -196,6 +228,14 @@ void wtfconfigure( char* ip, char* port){
 /*	1.1	*/
 void wtfcreate( char* projectname ){
 	wtfconnect();
+	
+	char * data = appendData("create", projectname);
+	if( sendToServer(data) == 0 ){
+		//project already on server
+		atexit(exitHandler);
+	}	
+	printf("command status: success\n");
+	//TODO: Get project from the server
 }
 
 /*	1.2	*/
