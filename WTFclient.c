@@ -13,45 +13,13 @@ int sockfd;
 void exitSignalHandler( int sig_num ){
 	close(sockfd);	
 	printf("Client socket closed\n");
-	exit(0);
+	exit(1);
 }
 
 void exitHandler(){
 	close(sockfd);
 	printf("Client socket closed\n");
-	exit(0);
-}
-
-int sendToServer(char* data){
-
-	int size = strlen(data);
-	write(sockfd, &size, sizeof(int)); //send size of data
-	printf("datasize sent:\n");
-	getFromServer(); //get server acceptance response of datasize
-	printf("server confirmation recieved\n");
-	
-	
-	write(sockfd, data, size); //send data
-	printf("data sent: %s\n", data);
-	int code = getFromServer(); //get server acceptance response of data
-	printf("server confirmation recieved\n");
-	return code;
-	
-	//return getFromServer(); //returns server's code of command execution
-}
-
-//Server returns data to signal success(1)/failure(0)
-int getFromServer(){ 
-	char * code = (char*)malloc(2*sizeof(char));
-	int readCode = -1;
-	while(readCode < 0 ){
-		readCode = read(sockfd, code, 1);
-		code[1] = '\0';  
-		//TODO: if too loop takes too long
-			//failure to send
-			//exit
-	}
-	return atoi(code);
+	exit(1);
 }
 
 int main( int argc, char** argv ){
@@ -160,7 +128,7 @@ int main( int argc, char** argv ){
 		*/
 	}
 	
-	atexit(exitHandler);
+	exitHandler();
 }
 
 /** Connect function for all commands that communicates with server**/
@@ -196,7 +164,7 @@ void wtfconnect(){
 	
 	//FIND SERVER	
 	if(server==NULL){
-		printf("Error: host not found\n"); atexit(exitHandler);
+		printf("Error: host not found\n"); exitHandler();
 	}
 	printf("Status: host found\n");
 	
@@ -208,7 +176,8 @@ void wtfconnect(){
 	memcpy(&serverAddr.sin_addr.s_addr, server->h_addr_list[0], sizeof(server->h_addr_list[0]));
 	serverAddr.sin_port = htons(port);
 	if(connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr))<0){
-		printf("Error: connection failed\n"); atexit(exitHandler);
+		printf("Error: connection failed\n"); 
+		exitHandler();
 	}else{
 		printf("Status: connected to server\n");
 	}
@@ -225,48 +194,70 @@ void wtfconfigure( char* ip, char* port){
 	close(file);
 }
 
-/*	1.1	*/
+/*
+	<command><dataType><bytesPname><projectName>
+			<numFile><bytesfName><fName><bytefContent><fContent>..
+*/
+
+//	1.1**
 void wtfcreate( char* projectname ){
 	wtfconnect();
 	
-	char * data = appendData("create", projectname);
-	if( sendToServer(data) == 0 ){
-		//project already on server
-		atexit(exitHandler);
-	}	
-	printf("command status: success\n");
-	//TODO: Get project from the server
+	char * data = appendData("create", "Project"); //command, dataType
+	data = appendData(data, int2str(strlen(projectname))); //bytesPname
+	data = appendData(data, projectname); //projectName
+	printf("data: %s\n", data);
+	int code = sendData(sockfd, data);	
+	
+	if( code == 0 ){ //project already exists
+		printf("Error: Project already exists on server.");
+		exitHandler();
+	}
+	
+	
+	//struct node* dataList = recieveData(sockfd);
+	
+	/*
+	char* projectname = dataList->next->next->next->word;
+	char* dirPath = getPath(".", projectname);
+	createDir(dirPath);
+	createFile(getPath(dirPath, ".manifest");
+	*/
+	
+	
+	
+
 }
 
-/*	1.2	*/
+//	1.2
 void wtfdestroy( char* projectname ){}
 
-/*	1.2	*/
+//	1.2
 void wtfcheckout( char* projectname ){}
 
-/*	2.1	*/
+//	2.1**
 void wtfadd( char* projectname, char* filename ){}
 
-/*	2.2	*/
+//	2.2
 void wtfremove( char* projectname, char* filename ){}
 
-/*	3.1	*/
+//	3.1**
 void wtfcommit( char* projectname ){}
 
-/*	3.2	*/
+//	3.2**
 void wtfpush( char* projectname ){}
 
-/* 	4.1	*/
+//	4.1
 void wtfcurrentversion( char* projectname ){}
 
-/*	4.1	*/
+//	4.1
 void wtfhistory( char* history ){}
 
-/*	4.1	*/
+//	4.1	
 void wtfrollback( char* projectname, char* version ){}
 
-/*	4.1	*/
+//	4.1**
 void wtfupdate( char* projectname ){}
 
-/*	4.2-After update()	*/
+//	4.2**
 void wtfupgrade( char* projectname ){}

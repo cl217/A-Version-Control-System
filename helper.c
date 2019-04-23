@@ -1,5 +1,13 @@
 #include "WTFheader.h"
 
+
+char* int2str(int num){
+	int digits = floor( log10( num ) ) + 1;
+	char* str = (char*)malloc((digits+1)*sizeof(char));
+	sprintf(str, "%d", num);
+	return str;
+}
+
 //helper to build the token while reading in
 //append("dest", "src") returns "destsrc"
 char* append( char* dest, char* src ){
@@ -31,15 +39,92 @@ char* appendChar( char* dest, char src ){
 	return newString;
 }
 
-
-
 //appendData("dest", "src") returns dest+\t+src = "dest\tsrc"
 char* appendData( char* dest, char* src ){
 	char* newString = (char*)malloc((strlen(dest)+strlen(src)+2)*sizeof(char));
 	strcpy(newString, dest);
-	strcat(newString, "\t");
+	strcat(newString, "\n");
 	strcat(newString, src);
 	return newString;
+}
+
+//concats: "current"+"/"+"entry"="current/entry"
+char* getPath( char* current, char* entry ){
+	char* path = (char*)malloc((strlen(current)+strlen(entry)+2)*sizeof(char));
+	memcpy(path, current, strlen(current));
+	strcat(path, "/");
+	strcat(path, entry);
+	return path;
+}
+
+
+int sendData( int fd, char* data ){
+
+	int size = strlen(data);
+	write(fd, &size, sizeof(int)); //send size of data
+	int code = recieveConfirmation(fd); //get confirmation
+	
+	if(code != 0 ){
+		write(fd, data, size); //send data
+		recieveConfirmation(fd); //get confirmation
+	}
+	
+	return code; //0 if error
+}
+
+struct node* recieveData( int fd ){
+	//recieve data size
+	int dataSize;
+	read(fd, &dataSize, sizeof(int));
+	sendConfirmation(fd, 1);
+	
+	printf("recieveData81\n");
+	
+	//recieve data
+	char data[dataSize+1];
+	read(fd, &data, dataSize);
+	data[dataSize]='\0';
+	sendConfirmation(fd, 1);
+	
+	printf("recieveData87\n");
+	
+	return splitData(data);	
+}
+
+void sendConfirmation(int fd, int code){ //1-success, 0-failure
+	int sendcode = code;
+	write(fd, &sendcode, sizeof(int));
+}
+
+int recieveConfirmation( int fd ){
+	int code;
+	read(fd, &code, sizeof(int));
+	return code;
+}
+
+/*WRITE MANIFEST 
+	<version of project><filepath><hashcode>
+*/
+int writeToManifest(){
+
+}
+
+
+int createDir(char* dirPath){
+	printf("dirPath: %s\n", dirPath);
+	DIR* dir = opendir(dirPath);
+	if( dir != NULL ){
+		return 0; //dir already exists
+	}
+	int code = mkdir(dirPath, 0700);
+	if( code == -1 ){
+		printf("error making dir\n");
+	}
+	return 1; //sucess
+}
+
+int createFile(char* filePath){
+	int fileFD = open(filePath, O_CREAT|O_WRONLY|O_TRUNC, 0777);
 }
 
 //TODO: splits data
@@ -59,8 +144,9 @@ char* appendData( char* dest, char* src ){
 				<numFile><bytesfName><fName><bytefContent><fContent>...	
 			
 */
+
 struct node* splitData(char* data){
-	printf("splitData()\n");
+	//printf("splitData()\n");
 	struct node* dataList = NULL;
 	struct node* endPtr = NULL;
 	
@@ -68,36 +154,41 @@ struct node* splitData(char* data){
 	
 	//READ IN COMMAND NODE
 	char * token = NULL;
-	do{
-		appendChar(token, data[i]);
+	while(data[i]!='\n'){
+		token = appendChar(token, data[i]);
 		i++;
-	}while(data[i]!='\0');
+	}
+	i++; //skips delim
 	struct node* addThis = (struct node*)malloc(1*sizeof(struct node));
 	addThis->nodeType = "command";
 	addThis->name = (char*)malloc((strlen(token)+1)*sizeof(char));
 	strcpy(addThis->name, token);
 	dataList = addThis; endPtr=addThis;
+	//printf("command: %s\n", token);
 		
 	//READ IN DATA TYPE NODE
 	token = NULL;
-	do{
-		appendChar(token, data[i]);
+	while(data[i]!='\n'){
+		token = appendChar(token, data[i]);
 		i++;
-	}while(data[i]!='\0');
+	}
+	i++; //skips delim
 	addThis = (struct node*)malloc(1*sizeof(struct node));
 	addThis->nodeType = "dataType";
 	addThis->name = (char*)malloc((strlen(token)+1)*sizeof(char));
 	strcpy(addThis->name, token);
 	endPtr->next=addThis; endPtr = addThis;
 	char* type = token;
+	//printf("dataType: %s\n", token);
 	
 	//READ IN PROJECT NODE
 	//read in projectname Bytes
 	token = NULL;
-	do{
-		appendChar(token, data[i]);
+	while(data[i]!='\n'){
+		token = appendChar(token, data[i]);
 		i++;
-	}while(data[i]!='\0');
+	}
+	i++; //skips delim
 	addThis = (struct node*)malloc(1*sizeof(struct node));
 	addThis->nodeType = "project";
 	int bytes = atoi(token);
@@ -105,22 +196,24 @@ struct node* splitData(char* data){
 	//read in project name
 	token = NULL;
 	for( int k = 0; k < bytes; k++ ){
-		appendChar(token, data[i]);
+		token = appendChar(token, data[i]);
 		i++;
 	}
 	i++; //skip delimeter
 	addThis->name = (char*)malloc((strlen(token)+1)*sizeof(char));
 	strcpy(addThis->name, token);
 	endPtr->next = addThis; endPtr = addThis;	
+	//printf("Projectname: %s\n", token);
 	
 	//if data contains files
 	if( strcmp(type, "Project") != 0 ){
 		//NUMFILE NODE
 		token = NULL;
-		do{
-			appendChar(token, data[i]);
+		while(data[i]!='\n'){
+			token = appendChar(token, data[i]);
 			i++;
-		}while(data[i]!='\t');
+		}
+		i++;
 		int numFile = atoi(token);
 		addThis = (struct node*)malloc(1*sizeof(struct node));
 		addThis->nodeType = "numFile";
@@ -133,17 +226,18 @@ struct node* splitData(char* data){
 			addThis->nodeType = (strstr(type, "Content")!= NULL)? "fileName":"fileContent";
 			//read in bytes of file Name
 			token = NULL;
-			do{
-				appendChar(token, data[i]);
+			while(data[i]!='\n'){
+				token = appendChar(token, data[i]);
 				i++;
-			}while(data[i]!='\t');
+			}
+			i++;
 			int numByte = atoi(token);
 			addThis->bytesName = numByte;
 			
 			//read in file name
 			token = NULL;
 			for( int m = 0; m < numByte; m++ ){
-				appendChar(token, data[i]);
+				token = appendChar(token, data[i]);
 				i++;
 			}
 			i++; //skip delimeter
@@ -154,16 +248,17 @@ struct node* splitData(char* data){
 			if( strstr(type,"Content") != NULL ){
 				//read in bytes of file content
 				token = NULL;
-				do{
-					appendChar(token, data[i]);
+				while(data[i]!='\n'){
+					token = appendChar(token, data[i]);
 					i++;
-				}while(data[i]!='\t');
+				}
+				i++;
 				numByte = atoi(token);
 				addThis->bytesContent = numByte;
 				
 				//read in file content
 				for( int m = 0; m < numByte; m++ ){
-					appendChar(token, data[i]);
+					token = appendChar(token, data[i]);
 					i++;
 				}
 				addThis->content = (char*)malloc((strlen(token)+1)*sizeof(char));
@@ -173,13 +268,13 @@ struct node* splitData(char* data){
 			endPtr->next=addThis; endPtr=addThis;
 		}
 	}
-	traverse(dataList);
+	//traverse(dataList);
 	return dataList; //return head of list
 }
 
 //temporary traverse function for testing
 void traverse(struct node* list){
-	printf("traverse()\n");
+	printf("\ntraverse()\n\n");
 	struct node* ptr = list;
 	while( ptr != NULL ){
 		char* nodeType = ptr->nodeType;

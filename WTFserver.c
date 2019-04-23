@@ -62,7 +62,7 @@ int main( int argc, char** argv ){
 		if((childpid = fork())==0){
 			close(sockfd);
 			while(1){
-				
+				/*
 				//read in datasize from client
 				int readCode = -1;
 				int dataSize;
@@ -75,12 +75,11 @@ int main( int argc, char** argv ){
 				readCode = read(newsockfd, &data, dataSize);
 				data[dataSize]='\0';
 				write(newsockfd, "1", 1);
-				printf("data(%s)\n", data);
 				
 				struct node* dataList = splitData(data);  //TODO
+				*/
 				
-				printf("81\n");
-				
+				struct node* dataList = recieveData(newsockfd);
 				
 				executeCommand(dataList);
 			}
@@ -91,7 +90,7 @@ int main( int argc, char** argv ){
  
 void executeCommand(struct node* dataList){
 
-	char* command; //get from datalist	
+	char* command = dataList->name;
 	
 	if(strcmp(command, "checkout")==0){
 	
@@ -104,7 +103,7 @@ void executeCommand(struct node* dataList){
 	}else if(strcmp(command, "push")==0){
 
 	}else if(strcmp(command, "create")==0){
-
+		serverCreate(dataList);
 	}else if(strcmp(command, "destroy")==0){
 
 	}else if(strcmp(command, "currentversion")==0){
@@ -116,6 +115,34 @@ void executeCommand(struct node* dataList){
 	}else{
 		//should never happen
 	}
+}
+
+/*
+	<command><dataType><bytesPname><projectName>
+			<numFile><bytesfName><fName><bytefContent><fContent>..
+*/
+void serverCreate(struct node* dataList){
+	printf("serverCreate\n");
+	
+	//traverse(dataList);
+	
+	char* projectname = dataList->next->next->name;
+	printf("projectname: %s\n", projectname);
+	char* dirPath = getPath(".", projectname);
+	createDir(dirPath);
+	createFile(getPath(dirPath, ".manifest"));
+
+
+	/*
+	char* data = appendData("create", "ProjectFile"); //command, dataType
+	data = appendData(data, int2str(strlen(projectname))); //bytesPname
+	data = appendData(data, projectname); //projectName
+	data = appendData(data, int2str(1)); //numFiles
+	data = appendData(data, int2str(strlen(".manifest"))); //bytesfName
+	data = appendData(data, ".manifest"); //fName
+	sendData(newsockfd, data);
+	*/
+	
 }
 
 
