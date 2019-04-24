@@ -16,6 +16,10 @@ int compareVersion( char* filePath, char* hash, struct manifestNode* list ){
 
 }
 
+//turns postive int to negative int
+int neg(int num){
+	return -1*num;
+}
 
 //1(true), 0(false)
 int dirExists(char* dirname){
@@ -43,14 +47,25 @@ void* writeToFile(int fd, char* data){
 
 
 char* int2str(int num){
+	int isNeg = 0;
 	if( num < 0 ){
-		char* str = "0";
-		return str;
+		isNeg = 1;
+		num = -1*num;
 	}
 	int digits = floor( log10( num ) ) + 1;
-	char* str = (char*)malloc((digits+1)*sizeof(char));
-	sprintf(str, "%d", num);
-	str[digits]='\0';
+	char* str;
+	
+	if( isNeg == 0 ){
+		str = (char*)malloc((digits+1)*sizeof(char));
+		sprintf(str, "%d", num);
+		str[digits]='\0';
+	}else{
+		str = (char*)malloc((digits+2)*sizeof(char));
+		sprintf(str, "%d", neg(num));
+		str[digits+1]='\0';
+	}
+	
+	//printf( "returnnum: %s\n", str);
 	return str;
 }
 
@@ -112,7 +127,8 @@ int createDir(char* dirPath){
 	if( code == -1 ){
 		printf("error making dir\n");
 	}
-	return 1; //sucess
+	closedir(dir);
+	return 1; //success
 }
 
 int createFile(char* filePath){

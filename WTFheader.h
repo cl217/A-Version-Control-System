@@ -36,6 +36,7 @@ struct node{
 };
 
 struct manifestNode{
+	int isCommited; //0 if not commited, 1 if commited
 	int version;
 	char* path;
 	char* hash;
@@ -54,6 +55,7 @@ int createFile(char*);
 int dirExists(char*);
 int fileExists(char*);
 int compareVersion( char*, char*, struct manifestNode* );
+int neg(int);
 
 
 /** communicate.c **/

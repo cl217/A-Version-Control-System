@@ -13,6 +13,11 @@ char* readFileData(char* filePath){
 	while( read(fileFD, &c[0], 1) > 0 ){
 		data = appendChar(data, c[0]);
 	}
+	
+	if(data==NULL){
+		data = "";
+	}
+	
 	printf("data: %s\n", data);
 	close(fileFD);
 	return data;
@@ -35,14 +40,19 @@ struct manifestNode* readManifest(char* manifestPath){
 		struct manifestNode* addThis = 
 					(struct manifestNode*)malloc(1*sizeof(struct manifestNode));
 		char* token = NULL;	
-		//read in version
 		
+		//read in version
+		addThis->isCommited = 1;
 		if( firstIteration == 1 ){
 			read(manifestFD, &c[0], 1); //reads char after newline
 			firstIteration = 0;
 		}
 		do{
-			token = appendChar(token, c[0]);
+			if( c[0] == '-' ){
+				addThis->isCommited = 0;
+			}else{
+				token = appendChar(token, c[0]);
+			}
 		}while(read(manifestFD, &c[0], 1) && c[0] != '\t');
 		addThis->version = atoi(token);
 		

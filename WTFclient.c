@@ -156,6 +156,8 @@ void wtfconnect(){
 		c[1] = '\0';
 		word = append(word, c);
 	}
+	close(configFile);
+	
 	int port = atoi(word);
 	
 	//CREATE CLIENT
@@ -246,6 +248,7 @@ void wtfadd( char* projectname, char* filename ){
 	if( dirExists(projectname) == 0 ){
 		printf("Error: Project does not exist\n"); exit(0);
 	}
+	
 	char* fileText = readFileData(getPath(projectname, filename));
 	if( fileText == NULL ){ 
 		return;
@@ -257,13 +260,16 @@ void wtfadd( char* projectname, char* filename ){
 		return;
 	}
 	
+	int version = (manifestList->isCommited == 0)? 
+						manifestList->version : ++(manifestList->version);
+	
 	char* filePath = getPath(projectname, filename);
 	char* hash = generateHash(fileText);
 	if( compareVersion( filePath, hash, manifestList ) == 0 ){
 		printf("Error: file has not been modified from last version\n");
 		return;
 	}
-	writeToManifest(manifestPath,-1, filePath, hash);
+	writeToManifest(manifestPath, neg(version), filePath, hash);
 	printf("./WTF add - success\n");
 }
 
