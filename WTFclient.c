@@ -214,19 +214,21 @@ void wtfcreate( char* projectname ){
 		exitHandler();
 	}
 	
+	struct node* dataList = recieveData(sockfd);
 	
-	//struct node* dataList = recieveData(sockfd);
-	
-	/*
-	char* projectname = dataList->next->next->next->word;
-	char* dirPath = getPath(".", projectname);
+	printf("219\n");
+	//TODO: could move to a function
+	struct node* projectNode = dataList->next->next;
+	char* dirPath = getPath(".", projectNode->name);
 	createDir(dirPath);
-	createFile(getPath(dirPath, ".manifest");
-	*/
+	struct node* fileNode = projectNode->next->next;
 	
-	
-	
-
+	int manifestFD = open(fileNode->name, O_WRONLY|O_CREAT|O_APPEND, 0666);
+	if(manifestFD<0){
+		printf("error: opening\n");
+	}
+	write(manifestFD, fileNode->content, fileNode->bytesContent);
+	close(manifestFD);
 }
 
 //	1.2

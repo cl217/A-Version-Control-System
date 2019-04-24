@@ -62,22 +62,6 @@ int main( int argc, char** argv ){
 		if((childpid = fork())==0){
 			close(sockfd);
 			while(1){
-				/*
-				//read in datasize from client
-				int readCode = -1;
-				int dataSize;
-				readCode = read(newsockfd, &dataSize, sizeof(int));
-				write(newsockfd, "1", 1);
-				
-				//read in data from client
-				char data[dataSize+1];
-				readCode = -1;
-				readCode = read(newsockfd, &data, dataSize);
-				data[dataSize]='\0';
-				write(newsockfd, "1", 1);
-				
-				struct node* dataList = splitData(data);  //TODO
-				*/
 				
 				struct node* dataList = recieveData(newsockfd);
 				
@@ -130,18 +114,28 @@ void serverCreate(struct node* dataList){
 	printf("projectname: %s\n", projectname);
 	char* dirPath = getPath(".", projectname);
 	createDir(dirPath);
-	createFile(getPath(dirPath, ".manifest"));
-
-
-	/*
-	char* data = appendData("create", "ProjectFile"); //command, dataType
+	char* manifestPath = getPath(dirPath, ".manifest");
+	int code = createFile(manifestPath);
+	if(code==0){
+		printf("Error: manifest creation\n");
+	}else{
+		printf("manifest created\n");
+	}
+	
+	char* manifestData = writeToManifest(0, manifestPath, "");
+	printf("write manifest: %s\n", manifestData );
+	
+	//TODO: could prob move to a loop+function
+	char* data = appendData("create", "ProjectFileContent"); //command, dataType
 	data = appendData(data, int2str(strlen(projectname))); //bytesPname
 	data = appendData(data, projectname); //projectName
 	data = appendData(data, int2str(1)); //numFiles
-	data = appendData(data, int2str(strlen(".manifest"))); //bytesfName
-	data = appendData(data, ".manifest"); //fName
+	data = appendData(data, int2str(strlen(manifestPath))); //bytesfName
+	data = appendData(data, manifestPath); //fName
+	data = appendData(data, int2str(strlen(manifestData))); //bytefContent
+	data = appendData(data, manifestData); //Content
+	
 	sendData(newsockfd, data);
-	*/
 	
 }
 

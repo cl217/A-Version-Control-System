@@ -1,22 +1,27 @@
 #include "WTFheader.h"
 
 
+void* writeToFile(int fd, char* data){
+
+}
+
 char* int2str(int num){
+
 	int digits = floor( log10( num ) ) + 1;
 	char* str = (char*)malloc((digits+1)*sizeof(char));
 	sprintf(str, "%d", num);
+	str[digits]='\0';
 	return str;
 }
 
-//helper to build the token while reading in
 //append("dest", "src") returns "destsrc"
 char* append( char* dest, char* src ){
 	if( dest == NULL ){
-		char* newString = (char*)malloc(2*sizeof(char));
+		char* newString = (char*)malloc((strlen(src)+1)*sizeof(char));
 		strcpy(newString, src);
 		return newString;
 	}
-	char* newString = (char*)malloc(strlen(dest)*sizeof(char));
+	char* newString = (char*)malloc((strlen(dest)+strlen(src)+1)*sizeof(char));
 	strcpy(newString, dest); //strcpy will copy null terminator
 	strcat(newString, src); //will overwrite /0 of dest, concat src
 	return newString;
@@ -43,7 +48,7 @@ char* appendChar( char* dest, char src ){
 char* appendData( char* dest, char* src ){
 	char* newString = (char*)malloc((strlen(dest)+strlen(src)+2)*sizeof(char));
 	strcpy(newString, dest);
-	strcat(newString, "\n");
+	strcat(newString, "\t");
 	strcat(newString, src);
 	return newString;
 }
@@ -51,7 +56,7 @@ char* appendData( char* dest, char* src ){
 //concats: "current"+"/"+"entry"="current/entry"
 char* getPath( char* current, char* entry ){
 	char* path = (char*)malloc((strlen(current)+strlen(entry)+2)*sizeof(char));
-	memcpy(path, current, strlen(current));
+	strcpy(path, current);
 	strcat(path, "/");
 	strcat(path, entry);
 	return path;
@@ -59,16 +64,13 @@ char* getPath( char* current, char* entry ){
 
 
 int sendData( int fd, char* data ){
-
 	int size = strlen(data);
 	write(fd, &size, sizeof(int)); //send size of data
 	int code = recieveConfirmation(fd); //get confirmation
-	
 	if(code != 0 ){
 		write(fd, data, size); //send data
 		recieveConfirmation(fd); //get confirmation
 	}
-	
 	return code; //0 if error
 }
 
@@ -103,10 +105,39 @@ int recieveConfirmation( int fd ){
 }
 
 /*WRITE MANIFEST 
-	<version of project><filepath><hashcode>
+	<version of project><\t><filepath><\t><hashcode><\n>
 */
-int writeToManifest(){
+char* writeToManifest(int curVersion, char* filepath, char* fileData){
 
+	int manifestFD = open(filepath, O_WRONLY|O_APPEND);
+	if(manifestFD<0){
+		printf("error: opening\n");
+	}
+	char* hash = generateHash(fileData);
+	char* version = int2str(++curVersion);
+	
+	char* mData = appendData(version, filepath);
+	mData = appendData(mData, hash);
+	
+	write(manifestFD, mData, strlen(mData));
+	
+	close(manifestFD);
+	return mData;
+}
+
+
+char* generateHash( char* fileData ){
+	
+	unsigned char temp[SHA_DIGEST_LENGTH];
+	char* buf = (char*)malloc((SHA_DIGEST_LENGTH*2+1)*sizeof(char));
+	memset(temp, 0x0, SHA_DIGEST_LENGTH);
+	SHA1((unsigned char*)fileData, strlen(fileData), temp);
+	for(int i = 0; i < SHA_DIGEST_LENGTH; i++){
+		sprintf((char*)&buf[i*2], "%02x", temp[i]);
+		
+	}
+	buf[SHA_DIGEST_LENGTH*2] = '\0';
+	return buf;	
 }
 
 
@@ -124,12 +155,18 @@ int createDir(char* dirPath){
 }
 
 int createFile(char* filePath){
-	int fileFD = open(filePath, O_CREAT|O_WRONLY|O_TRUNC, 0777);
+	printf("filePath: %s\n", filePath);
+	int fileFD = open(filePath, O_CREAT|O_WRONLY|O_TRUNC, 0666);
+	if( fileFD < 0 ){
+		printf("error creating file\n"); return 0;
+	}
+	close(fileFD);
+	return 1;
 }
 
 //TODO: splits data
 /*	FORMAT: 
-		-delimeter to split tokens is '\n'
+		-delimeter to split tokens is '\t'
 		-first token will always be the command
 		-2nd token (if any) will be type of data:
 			-Project: sending project name only (create, etc)
@@ -154,7 +191,7 @@ struct node* splitData(char* data){
 	
 	//READ IN COMMAND NODE
 	char * token = NULL;
-	while(data[i]!='\n'){
+	while(data[i]!='\t'){
 		token = appendChar(token, data[i]);
 		i++;
 	}
@@ -168,7 +205,7 @@ struct node* splitData(char* data){
 		
 	//READ IN DATA TYPE NODE
 	token = NULL;
-	while(data[i]!='\n'){
+	while(data[i]!='\t'){
 		token = appendChar(token, data[i]);
 		i++;
 	}
@@ -184,7 +221,7 @@ struct node* splitData(char* data){
 	//READ IN PROJECT NODE
 	//read in projectname Bytes
 	token = NULL;
-	while(data[i]!='\n'){
+	while(data[i]!='\t'){
 		token = appendChar(token, data[i]);
 		i++;
 	}
@@ -209,7 +246,7 @@ struct node* splitData(char* data){
 	if( strcmp(type, "Project") != 0 ){
 		//NUMFILE NODE
 		token = NULL;
-		while(data[i]!='\n'){
+		while(data[i]!='\t'){
 			token = appendChar(token, data[i]);
 			i++;
 		}
@@ -223,10 +260,11 @@ struct node* splitData(char* data){
 		//READ IN FILES		
 		for( int k = 0; k < numFile; k++ ){
 			addThis = (struct node*)malloc(1*sizeof(struct node));
-			addThis->nodeType = (strstr(type, "Content")!= NULL)? "fileName":"fileContent";
+			addThis->nodeType = (strstr(type, "Content")== NULL)? "fileName":"fileContent";
+			
 			//read in bytes of file Name
 			token = NULL;
-			while(data[i]!='\n'){
+			while(data[i]!='\t'){
 				token = appendChar(token, data[i]);
 				i++;
 			}
@@ -246,15 +284,17 @@ struct node* splitData(char* data){
 			
 			//if data contains file content
 			if( strstr(type,"Content") != NULL ){
+				printf("286\n");
 				//read in bytes of file content
 				token = NULL;
-				while(data[i]!='\n'){
+				while(data[i]!='\t'){
 					token = appendChar(token, data[i]);
 					i++;
 				}
 				i++;
 				numByte = atoi(token);
 				addThis->bytesContent = numByte;
+				//printf("numByte: %d\n", addThis->bytesContent);
 				
 				//read in file content
 				for( int m = 0; m < numByte; m++ ){
@@ -266,9 +306,10 @@ struct node* splitData(char* data){
 				i++; //skip delimeter
 			}
 			endPtr->next=addThis; endPtr=addThis;
+
 		}
 	}
-	//traverse(dataList);
+	traverse(dataList);
 	return dataList; //return head of list
 }
 
@@ -298,11 +339,11 @@ void traverse(struct node* list){
 			printf("\tname(%s)\n", ptr->name);
 			printf("\tbytesName(%d)\n", ptr->bytesName);
 			
-		}else if(strcmp(nodeType, "fileNameContent")==0){
+		}else if(strcmp(nodeType, "fileContent")==0){
 			printf("\tname(%s)\n", ptr->name);
 			printf("\tbytesName(%d)\n", ptr->bytesName);
 			printf("\tcontent(%s)\n", ptr->content);
-			printf("\tbytesContent(%s)\n", ptr->bytesContent);
+			printf("\tbytesContent(%d)\n", ptr->bytesContent);
 		}else{
 			printf("\tinvalid node type\n");
 		}

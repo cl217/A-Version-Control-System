@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <dirent.h>
+#include <openssl/sha.h>
 
 /*
 #include <arpa/inet.h>
@@ -22,7 +23,7 @@
 */
 /** structures **/
 struct node{
-	char* nodeType; //command, dataType, project, numFile, fileName, fileNameContent
+	char* nodeType; //command, dataType, project, numFile, fileName, fileContent
 	int bytesName; //also used for numFile
 	char* name;
 	int bytesContent;
@@ -43,7 +44,8 @@ void sendConfirmation(int, int);
 int recieveConfirmation(int);
 int createDir(char*);
 int createFile(char*);
-
+char* generateHash(char*);
+char* writeToManifest(int, char*, char*);
 
 /** wtfserver.c **/
 void executeCommand(struct node*);
