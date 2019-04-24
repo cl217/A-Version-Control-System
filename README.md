@@ -1,6 +1,9 @@
-TO TEST:
+To Test
 	Move WTFserver executable to server folder
-	Move WTF executable to project file
+
+IP (localhost): 127.0.0.1
+
+Port: Any between 2000-9999
 	
 
 

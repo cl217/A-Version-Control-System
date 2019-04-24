@@ -110,11 +110,20 @@ void serverCreate(struct node* dataList){
 	
 	//traverse(dataList);
 	
+	
 	char* projectname = dataList->next->next->name;
-	printf("projectname: %s\n", projectname);
-	char* dirPath = getPath(".", projectname);
-	createDir(dirPath);
-	char* manifestPath = getPath(dirPath, ".manifest");
+	
+	int exists = dirExists(projectname);
+	if( exists == 1 ){
+		printf("server120\n");
+		char* data = appendData("create", "Error");
+		sendData(newsockfd, data);
+		return;
+	}
+	
+	
+	createDir(projectname);
+	char* manifestPath = getPath(projectname, MANIFEST);
 	int code = createFile(manifestPath);
 	if(code==0){
 		printf("Error: manifest creation\n");
@@ -122,7 +131,7 @@ void serverCreate(struct node* dataList){
 		printf("manifest created\n");
 	}
 	
-	char* manifestData = writeToManifest(0, manifestPath, "");
+	char* manifestData = writeToManifest(manifestPath,1, manifestPath, generateHash(""));
 	printf("write manifest: %s\n", manifestData );
 	
 	//TODO: could prob move to a loop+function

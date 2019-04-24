@@ -21,6 +21,10 @@
 #include <ctype.h>
 #include <libgen.h>
 */
+
+#define MANIFEST ".manifest"
+
+
 /** structures **/
 struct node{
 	char* nodeType; //command, dataType, project, numFile, fileName, fileContent
@@ -31,21 +35,40 @@ struct node{
 	struct node* next;
 };
 
+struct manifestNode{
+	int version;
+	char* path;
+	char* hash;
+	struct manifestNode* next;	
+};
+
+
 /** helper.c **/
 char* append(char*, char*);
 char* appendChar(char*, char);
 char* appendData(char*, char*);
-struct node* splitData(char*);
 char* int2str(int);
 char* getPath(char* current, char* entry);
+int createDir(char*);
+int createFile(char*);
+int dirExists(char*);
+int fileExists(char*);
+int compareVersion( char*, char*, struct manifestNode* );
+
+
+/** communicate.c **/
 int sendData(int, char*);
 struct node* recieveData(int);
 void sendConfirmation(int, int);
 int recieveConfirmation(int);
-int createDir(char*);
-int createFile(char*);
+struct node* splitData(char*);
+
+
+/** readwrite.c **/
 char* generateHash(char*);
-char* writeToManifest(int, char*, char*);
+char* writeToManifest(char*, int, char*, char*);
+struct manifestNode* readManifest(char*);
+char* readFileData(char*);
 
 /** wtfserver.c **/
 void executeCommand(struct node*);
@@ -54,9 +77,6 @@ void serverCreate(struct node*);
 /** wtfclient.c **/
 void exitSignalHandler(int sig_num);
 void exitHandler();
-//int getFromServer();
-//int sendToServer(char* data);
-
 void wtfconnect();
 void wtfconfigure(char*, char*);
 void wtfcreate(char*);
@@ -73,10 +93,8 @@ void wtfupdate(char*);
 void wtfupgrade(char*);
 
 
-
 /** testing purposes **/
 void traverse(struct node*);
-
 
 
 #endif

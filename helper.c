@@ -1,12 +1,52 @@
 #include "WTFheader.h"
 
+//compares file against last version of file in manifest
+int compareVersion( char* filePath, char* hash, struct manifestNode* list ){
+	struct manifestNode* ptr = list;
+	while(ptr!=NULL){
+		if( strcmp(filePath, list->path) == 0 ){
+			if( strcmp(hash, list->hash) == 0 ){
+				return 0; //same		
+			}
+			return 1; //different (exists)
+		}
+		ptr=ptr->next;	
+	}
+	return 2; //different (new file)
+
+}
+
+
+//1(true), 0(false)
+int dirExists(char* dirname){
+	DIR* dir = opendir(dirname);
+	if(dir==NULL){
+		closedir(dir);
+		return 0; //does not exist
+	}
+	closedir(dir);
+	return 1; //exists
+}
+
+int fileExists(char* fileName){
+	int fileFD =  open(fileName,O_RDONLY);
+	if(fileFD<0){
+		return 0; //does not exist
+	}
+	close(fileFD);
+	return 1; //exists
+}
 
 void* writeToFile(int fd, char* data){
 
 }
 
-char* int2str(int num){
 
+char* int2str(int num){
+	if( num < 0 ){
+		char* str = "0";
+		return str;
+	}
 	int digits = floor( log10( num ) ) + 1;
 	char* str = (char*)malloc((digits+1)*sizeof(char));
 	sprintf(str, "%d", num);
@@ -62,85 +102,6 @@ char* getPath( char* current, char* entry ){
 	return path;
 }
 
-
-int sendData( int fd, char* data ){
-	int size = strlen(data);
-	write(fd, &size, sizeof(int)); //send size of data
-	int code = recieveConfirmation(fd); //get confirmation
-	if(code != 0 ){
-		write(fd, data, size); //send data
-		recieveConfirmation(fd); //get confirmation
-	}
-	return code; //0 if error
-}
-
-struct node* recieveData( int fd ){
-	//recieve data size
-	int dataSize;
-	read(fd, &dataSize, sizeof(int));
-	sendConfirmation(fd, 1);
-	
-	printf("recieveData81\n");
-	
-	//recieve data
-	char data[dataSize+1];
-	read(fd, &data, dataSize);
-	data[dataSize]='\0';
-	sendConfirmation(fd, 1);
-	
-	printf("recieveData87\n");
-	
-	return splitData(data);	
-}
-
-void sendConfirmation(int fd, int code){ //1-success, 0-failure
-	int sendcode = code;
-	write(fd, &sendcode, sizeof(int));
-}
-
-int recieveConfirmation( int fd ){
-	int code;
-	read(fd, &code, sizeof(int));
-	return code;
-}
-
-/*WRITE MANIFEST 
-	<version of project><\t><filepath><\t><hashcode><\n>
-*/
-char* writeToManifest(int curVersion, char* filepath, char* fileData){
-
-	int manifestFD = open(filepath, O_WRONLY|O_APPEND);
-	if(manifestFD<0){
-		printf("error: opening\n");
-	}
-	char* hash = generateHash(fileData);
-	char* version = int2str(++curVersion);
-	
-	char* mData = appendData(version, filepath);
-	mData = appendData(mData, hash);
-	
-	write(manifestFD, mData, strlen(mData));
-	
-	close(manifestFD);
-	return mData;
-}
-
-
-char* generateHash( char* fileData ){
-	
-	unsigned char temp[SHA_DIGEST_LENGTH];
-	char* buf = (char*)malloc((SHA_DIGEST_LENGTH*2+1)*sizeof(char));
-	memset(temp, 0x0, SHA_DIGEST_LENGTH);
-	SHA1((unsigned char*)fileData, strlen(fileData), temp);
-	for(int i = 0; i < SHA_DIGEST_LENGTH; i++){
-		sprintf((char*)&buf[i*2], "%02x", temp[i]);
-		
-	}
-	buf[SHA_DIGEST_LENGTH*2] = '\0';
-	return buf;	
-}
-
-
 int createDir(char* dirPath){
 	printf("dirPath: %s\n", dirPath);
 	DIR* dir = opendir(dirPath);
@@ -164,154 +125,6 @@ int createFile(char* filePath){
 	return 1;
 }
 
-//TODO: splits data
-/*	FORMAT: 
-		-delimeter to split tokens is '\t'
-		-first token will always be the command
-		-2nd token (if any) will be type of data:
-			-Project: sending project name only (create, etc)
-			-ProjectFile: sending projectName with fileName, no content (remove,destroy,etc)
-			-ProjectFileContent: sending projectName with fileNames and content 
-			-ProjectVersion: ProjectName and version
-		-3rd token 
-			-if files are sent- num of files being sent
-		
-		-For ProjectFileContent
-			<command><dataType><bytesPname><projectName>
-				<numFile><bytesfName><fName><bytefContent><fContent>...	
-			
-*/
-
-struct node* splitData(char* data){
-	//printf("splitData()\n");
-	struct node* dataList = NULL;
-	struct node* endPtr = NULL;
-	
-	int i = 0;
-	
-	//READ IN COMMAND NODE
-	char * token = NULL;
-	while(data[i]!='\t'){
-		token = appendChar(token, data[i]);
-		i++;
-	}
-	i++; //skips delim
-	struct node* addThis = (struct node*)malloc(1*sizeof(struct node));
-	addThis->nodeType = "command";
-	addThis->name = (char*)malloc((strlen(token)+1)*sizeof(char));
-	strcpy(addThis->name, token);
-	dataList = addThis; endPtr=addThis;
-	//printf("command: %s\n", token);
-		
-	//READ IN DATA TYPE NODE
-	token = NULL;
-	while(data[i]!='\t'){
-		token = appendChar(token, data[i]);
-		i++;
-	}
-	i++; //skips delim
-	addThis = (struct node*)malloc(1*sizeof(struct node));
-	addThis->nodeType = "dataType";
-	addThis->name = (char*)malloc((strlen(token)+1)*sizeof(char));
-	strcpy(addThis->name, token);
-	endPtr->next=addThis; endPtr = addThis;
-	char* type = token;
-	//printf("dataType: %s\n", token);
-	
-	//READ IN PROJECT NODE
-	//read in projectname Bytes
-	token = NULL;
-	while(data[i]!='\t'){
-		token = appendChar(token, data[i]);
-		i++;
-	}
-	i++; //skips delim
-	addThis = (struct node*)malloc(1*sizeof(struct node));
-	addThis->nodeType = "project";
-	int bytes = atoi(token);
-	addThis->bytesName = bytes;
-	//read in project name
-	token = NULL;
-	for( int k = 0; k < bytes; k++ ){
-		token = appendChar(token, data[i]);
-		i++;
-	}
-	i++; //skip delimeter
-	addThis->name = (char*)malloc((strlen(token)+1)*sizeof(char));
-	strcpy(addThis->name, token);
-	endPtr->next = addThis; endPtr = addThis;	
-	//printf("Projectname: %s\n", token);
-	
-	//if data contains files
-	if( strcmp(type, "Project") != 0 ){
-		//NUMFILE NODE
-		token = NULL;
-		while(data[i]!='\t'){
-			token = appendChar(token, data[i]);
-			i++;
-		}
-		i++;
-		int numFile = atoi(token);
-		addThis = (struct node*)malloc(1*sizeof(struct node));
-		addThis->nodeType = "numFile";
-		addThis->bytesName = numFile;
-		endPtr->next=addThis; endPtr=addThis;
-
-		//READ IN FILES		
-		for( int k = 0; k < numFile; k++ ){
-			addThis = (struct node*)malloc(1*sizeof(struct node));
-			addThis->nodeType = (strstr(type, "Content")== NULL)? "fileName":"fileContent";
-			
-			//read in bytes of file Name
-			token = NULL;
-			while(data[i]!='\t'){
-				token = appendChar(token, data[i]);
-				i++;
-			}
-			i++;
-			int numByte = atoi(token);
-			addThis->bytesName = numByte;
-			
-			//read in file name
-			token = NULL;
-			for( int m = 0; m < numByte; m++ ){
-				token = appendChar(token, data[i]);
-				i++;
-			}
-			i++; //skip delimeter
-			addThis->name = (char*)malloc((strlen(token)+1)*sizeof(char));
-			strcpy(addThis->name, token);
-			
-			//if data contains file content
-			if( strstr(type,"Content") != NULL ){
-				printf("286\n");
-				//read in bytes of file content
-				token = NULL;
-				while(data[i]!='\t'){
-					token = appendChar(token, data[i]);
-					i++;
-				}
-				i++;
-				numByte = atoi(token);
-				addThis->bytesContent = numByte;
-				//printf("numByte: %d\n", addThis->bytesContent);
-				
-				//read in file content
-				for( int m = 0; m < numByte; m++ ){
-					token = appendChar(token, data[i]);
-					i++;
-				}
-				addThis->content = (char*)malloc((strlen(token)+1)*sizeof(char));
-				strcpy(addThis->content, token);
-				i++; //skip delimeter
-			}
-			endPtr->next=addThis; endPtr=addThis;
-
-		}
-	}
-	traverse(dataList);
-	return dataList; //return head of list
-}
 
 //temporary traverse function for testing
 void traverse(struct node* list){

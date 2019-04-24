@@ -8,7 +8,7 @@
 */
 
 int isExit = 0;
-int sockfd;
+int sockfd = -1;
 
 void exitSignalHandler( int sig_num ){
 	close(sockfd);	
@@ -128,7 +128,10 @@ int main( int argc, char** argv ){
 		*/
 	}
 	
-	exitHandler();
+	if(sockfd > 0 ){
+		exitHandler();
+	}
+	return 0;
 }
 
 /** Connect function for all commands that communicates with server**/
@@ -206,17 +209,16 @@ void wtfcreate( char* projectname ){
 	char * data = appendData("create", "Project"); //command, dataType
 	data = appendData(data, int2str(strlen(projectname))); //bytesPname
 	data = appendData(data, projectname); //projectName
-	printf("data: %s\n", data);
-	int code = sendData(sockfd, data);	
-	
-	if( code == 0 ){ //project already exists
-		printf("Error: Project already exists on server.");
-		exitHandler();
-	}
+	printf("Sending to server: %s\n", data);
+	sendData(sockfd, data);	
 	
 	struct node* dataList = recieveData(sockfd);
 	
-	printf("219\n");
+	if( strcmp(dataList->next->name, "Error")==0 ){ //project already exists
+		printf("Error: Project already exists on server.\n");
+		exitHandler();
+	}
+	
 	//TODO: could move to a function
 	struct node* projectNode = dataList->next->next;
 	char* dirPath = getPath(".", projectNode->name);
@@ -238,7 +240,32 @@ void wtfdestroy( char* projectname ){}
 void wtfcheckout( char* projectname ){}
 
 //	2.1**
-void wtfadd( char* projectname, char* filename ){}
+//client adds file to own manifest
+void wtfadd( char* projectname, char* filename ){
+	printf("wtfadd()\n");
+	if( dirExists(projectname) == 0 ){
+		printf("Error: Project does not exist\n"); exit(0);
+	}
+	char* fileText = readFileData(getPath(projectname, filename));
+	if( fileText == NULL ){ 
+		return;
+	}
+	
+	char* manifestPath = getPath(projectname, MANIFEST);
+	struct manifestNode* manifestList = readManifest(manifestPath);
+	if( manifestList == NULL ){
+		return;
+	}
+	
+	char* filePath = getPath(projectname, filename);
+	char* hash = generateHash(fileText);
+	if( compareVersion( filePath, hash, manifestList ) == 0 ){
+		printf("Error: file has not been modified from last version\n");
+		return;
+	}
+	writeToManifest(manifestPath,-1, filePath, hash);
+	printf("./WTF add - success\n");
+}
 
 //	2.2
 void wtfremove( char* projectname, char* filename ){}
