@@ -131,7 +131,7 @@ void serverCreate(struct node* dataList){
 		printf("manifest created\n");
 	}
 	
-	char* manifestData = writeToManifest(manifestPath,1, manifestPath, generateHash(""));
+	char* manifestData = writeToManifest(manifestPath, "uptodate", 1, manifestPath, generateHash(""));
 	printf("write manifest: %s\n", manifestData );
 	
 	//TODO: could prob move to a loop+function

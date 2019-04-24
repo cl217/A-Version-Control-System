@@ -36,7 +36,7 @@ struct node{
 };
 
 struct manifestNode{
-	int isCommited; //0 if not commited, 1 if commited
+	char* code; //upload, modify, deleted, uptodate
 	int version;
 	char* path;
 	char* hash;
@@ -68,7 +68,7 @@ struct node* splitData(char*);
 
 /** readwrite.c **/
 char* generateHash(char*);
-char* writeToManifest(char*, int, char*, char*);
+char* writeToManifest(char*,char*, int, char*, char*);
 struct manifestNode* readManifest(char*);
 char* readFileData(char*);
 

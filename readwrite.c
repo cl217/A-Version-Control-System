@@ -40,20 +40,23 @@ struct manifestNode* readManifest(char* manifestPath){
 		struct manifestNode* addThis = 
 					(struct manifestNode*)malloc(1*sizeof(struct manifestNode));
 		char* token = NULL;	
-		
-		//read in version
-		addThis->isCommited = 1;
-		if( firstIteration == 1 ){
-			read(manifestFD, &c[0], 1); //reads char after newline
+		if(firstIteration==1){
+			read(manifestFD, &c[0], 1);
 			firstIteration = 0;
 		}
+		
+		//read in code
 		do{
-			if( c[0] == '-' ){
-				addThis->isCommited = 0;
-			}else{
-				token = appendChar(token, c[0]);
-			}
-		}while(read(manifestFD, &c[0], 1) && c[0] != '\t');
+			token = appendChar(token, c[0]);
+		}while(read(manifestFD, &c[0], 1) && c[0] !='\t');
+		addThis->code = (char*)malloc((strlen(token)+1)*sizeof(char));
+		strcpy(addThis->code, token);
+		
+		//read in version
+		token = NULL;
+		while(read(manifestFD, &c[0], 1) && c[0] != '\t'){
+			token = appendChar(token, c[0]);
+		}
 		addThis->version = atoi(token);
 		
 		//read in path
@@ -85,10 +88,11 @@ struct manifestNode* readManifest(char* manifestPath){
 
 
 /*WRITE MANIFEST 
-	<\n><version of project><\t><filepath><\t><hashcode>
+	code - new, modified, deleted, uptodate
+	<\n><code><version of project><\t><filepath><\t><hashcode>
 	<\n>...
 */
-char* writeToManifest(char* manifestPath, int curVersion, char* filepath, char* hash){
+char* writeToManifest(char* manifestPath, char* code, int curVersion, char* filepath, char* hash){
 
 	int manifestFD = open(manifestPath, O_WRONLY|O_APPEND);
 	if(manifestFD<0){
@@ -96,12 +100,12 @@ char* writeToManifest(char* manifestPath, int curVersion, char* filepath, char* 
 	}
 	char* version = int2str(curVersion);
 	
-	char* mData = append("\n", version);
+	char* mData = append("\n", code);
+	mData = appendData(mData, version);
 	mData = appendData(mData, filepath);
 	mData = appendData(mData, hash);
 		
 	write(manifestFD, mData, strlen(mData));
-	//write(manifestFD, "h", 1);
 	
 	close(manifestFD);
 	return mData;

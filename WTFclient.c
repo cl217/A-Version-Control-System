@@ -260,20 +260,26 @@ void wtfadd( char* projectname, char* filename ){
 		return;
 	}
 	
-	int version = (manifestList->isCommited == 0)? 
+	int version = (strcmp(manifestList->code, "uptodate")==0)? 
 						manifestList->version : ++(manifestList->version);
 	
 	char* filePath = getPath(projectname, filename);
 	char* hash = generateHash(fileText);
-	if( compareVersion( filePath, hash, manifestList ) == 0 ){
+	
+	int compareCode = compareVersion(filePath, hash, manifestList); //1(modified), 2(new), 0(same)
+	if( compareCode == 0 ){
 		printf("Error: file has not been modified from last version\n");
 		return;
 	}
-	writeToManifest(manifestPath, neg(version), filePath, hash);
+	if( compareCode == 1 ){
+		writeToManifest(manifestPath, "modify", version, filePath, hash);
+	}else{
+		writeToManifest(manifestPath, "upload", version, filePath, hash);
+	}
 	printf("./WTF add - success\n");
 }
 
-//	2.2
+//	2.2 - removed the latest version of file from manifest
 void wtfremove( char* projectname, char* filename ){}
 
 //	3.1**

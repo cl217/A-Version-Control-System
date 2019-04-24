@@ -1,4 +1,3 @@
 
-1	testProject/.manifest	da39a3ee5e6b4b0d3255bfef95601890afd80709
--2	testProject/testfile.c	5b8a162b645ef0e7ece5e54838508c8f876b8cca
--2	testProject/anotherfile.c	da39a3ee5e6b4b0d3255bfef95601890afd80709
+uptodate	1	testProject/.manifest	da39a3ee5e6b4b0d3255bfef95601890afd80709
+upload	1	testProject/file1.c	0af9f2eed29aef791dc0efa21858329a9554916c
