@@ -24,56 +24,51 @@ char* readFileData(char* filePath){
 }
 
 
-
-//reads from the manifest file
-struct manifestNode* readManifest(char* manifestPath){
+//builds list from manifest data
+struct manifestNode* parseManifest(char* manifestData){
 	//add node to beginning, most recent versions at the front
 	struct manifestNode* manifestList = NULL;
 	
-	int manifestFD = open(manifestPath, O_RDONLY);
-	if(manifestFD < 0 ){
-		printf("Error: .manifest does not exist\n"); return NULL; 
-	}
-	char c[1];
 	int firstIteration = 1;
-	while( read(manifestFD, &c[0], 1) > 0 ){
+	int i = 1;
+	while( i < strlen(manifestData) ){
 		struct manifestNode* addThis = 
 					(struct manifestNode*)malloc(1*sizeof(struct manifestNode));
 		char* token = NULL;	
-		if(firstIteration==1){
-			read(manifestFD, &c[0], 1);
-			firstIteration = 0;
-		}
-		
+
 		//read in code
-		do{
-			token = appendChar(token, c[0]);
-		}while(read(manifestFD, &c[0], 1) && c[0] !='\t');
+		while( manifestData[i] !='\t'){
+			token = appendChar(token, manifestData[i++]);
+		}
 		addThis->code = (char*)malloc((strlen(token)+1)*sizeof(char));
 		strcpy(addThis->code, token);
+		printf("code: %s\n", token);
 		
 		//read in version
-		token = NULL;
-		while(read(manifestFD, &c[0], 1) && c[0] != '\t'){
-			token = appendChar(token, c[0]);
+		token = NULL; i++;
+		while(manifestData[i] != '\t'){
+			token = appendChar(token, manifestData[i++]);
 		}
 		addThis->version = atoi(token);
+		printf("version: %s\n", token);
 		
 		//read in path
-		token = NULL;
-		while(read(manifestFD, &c[0], 1)>0 && c[0] != '\t'){
-			token = appendChar(token, c[0]);
+		token = NULL; i++;
+		while( manifestData[i] != '\t'){
+			token = appendChar(token, manifestData[i++]);
 		} 
 		addThis->path = (char*)malloc((strlen(token)+1)*sizeof(char));
 		strcpy(addThis->path, token);
+		printf("path: %s\n", token);
 				
 		//read hash code		
-		token = NULL;
-		while(read(manifestFD, &c[0], 1)>0 && c[0] != '\n'){
-			token = appendChar(token, c[0]);		
+		token = NULL; i++;
+		while( i < strlen(manifestData) && manifestData[i] != '\n' ){
+			token = appendChar(token, manifestData[i++]);		
 		}
 		addThis->hash = (char*)malloc((strlen(token)+1)*sizeof(char));
 		strcpy(addThis->hash, token);
+		printf("hash: %s\n", token);
 		
 		if(manifestList == NULL ){
 			manifestList=addThis;
@@ -82,7 +77,7 @@ struct manifestNode* readManifest(char* manifestPath){
 			manifestList = addThis;
 		}
 	}
-	close(manifestFD);
+	printf("rw76\n");
 	return manifestList;
 }
 

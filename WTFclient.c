@@ -17,8 +17,10 @@ void exitSignalHandler( int sig_num ){
 }
 
 void exitHandler(){
-	close(sockfd);
-	printf("Client socket closed\n");
+	if( sockfd > 0 ){
+		close(sockfd);
+		printf("Client socket closed\n");
+	}
 	exit(1);
 }
 
@@ -139,7 +141,7 @@ void wtfconnect(){
 	//open to read from .configure file
 	int configFile = open("./.configure", O_RDONLY);
 	if( configFile == -1 ){
-		printf("Error: no .configure found\n"); exit(1);
+		printf("Error: no .configure found\n"); exitHandler();
 	}
 	
 	char* c = (char*)malloc(2*sizeof(char));
@@ -163,7 +165,7 @@ void wtfconnect(){
 	//CREATE CLIENT
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if(sockfd<0){
-		printf("Error: can't open socket\n"); exit(1);
+		printf("Error: can't open socket\n"); exitHandler();
 	}
 	printf("Status: new client created\n");
 	
@@ -191,7 +193,7 @@ void wtfconnect(){
 void wtfconfigure( char* ip, char* port){
 	int file = open( "./.configure", O_CREAT | O_WRONLY | O_TRUNC, 0777 );
 	if( file < 0 ){
-		printf("Error: .configure file creation failed\n"); return;
+		printf("Error: .configure file creation failed\n"); exitHandler();
 	}
 	write(file, ip, strlen(ip));
 	write(file, "\n", 1);
@@ -246,18 +248,18 @@ void wtfcheckout( char* projectname ){}
 void wtfadd( char* projectname, char* filename ){
 	printf("wtfadd()\n");
 	if( dirExists(projectname) == 0 ){
-		printf("Error: Project does not exist\n"); exit(0);
+		printf("Error: Project does not exist\n"); exitHandler();
 	}
 	
 	char* fileText = readFileData(getPath(projectname, filename));
 	if( fileText == NULL ){ 
-		return;
+		exitHandler();
 	}
 	
 	char* manifestPath = getPath(projectname, MANIFEST);
-	struct manifestNode* manifestList = readManifest(manifestPath);
+	struct manifestNode* manifestList = parseManifest(readFileData(manifestPath));
 	if( manifestList == NULL ){
-		return;
+		exitHandler();
 	}
 	
 	int version = (strcmp(manifestList->code, "uptodate")==0)? 
@@ -269,7 +271,7 @@ void wtfadd( char* projectname, char* filename ){
 	int compareCode = compareVersion(filePath, hash, manifestList); //1(modified), 2(new), 0(same)
 	if( compareCode == 0 ){
 		printf("Error: file has not been modified from last version\n");
-		return;
+		exitHandler();
 	}
 	if( compareCode == 1 ){
 		writeToManifest(manifestPath, "modify", version, filePath, hash);
@@ -279,11 +281,55 @@ void wtfadd( char* projectname, char* filename ){
 	printf("./WTF add - success\n");
 }
 
-//	2.2 - removed the latest version of file from manifest
+//	2.2 - remove the latest version of file from manifest
 void wtfremove( char* projectname, char* filename ){}
 
+//	before commit**
+void wtfupdate( char* projectname ){
+	printf("wtfupdate()\n");
+	if(dirExists(projectname)==0){
+		printf("Error: Project does not exist\n"); exitHandler();
+	}
+	wtfconnect(); //shuts down program if cant connect
+	
+	char * data = appendData("update", "Project"); //command, dataType
+	data = appendData(data, int2str(strlen(projectname))); //bytesPname
+	data = appendData(data, projectname); //projectName
+	printf("Sending to server: %s\n", data);
+	sendData(sockfd, data);	
+	
+	struct node* dataList = recieveData(sockfd);
+	if( strcmp(dataList->next->name, "Error")==0 ){ //project already exists
+		printf("Error: Project does not exist on server\n");
+		exitHandler();
+	}
+	
+	//<commandNode><dataTypeNode><projectNode><numfileNode><fileNode>
+	struct manifestNode* serverManifest 
+					= parseManifest(dataList->next->next->next->next->content);
+	struct manifestNode* clientManifest
+					= parseManifest(readFileData(getPath(projectname, MANIFEST)));	
+	
+	
+	//TODO: compare server and client manifest
+	
+		
+
+}
+
+//	after update**
+void wtfupgrade( char* projectname ){}
+
 //	3.1**
-void wtfcommit( char* projectname ){}
+void wtfcommit( char* projectname ){
+	printf("wtfcommit()\n");
+	if( dirExists(projectname) == 0 ){
+		printf("Error: Project does not exist\n"); exitHandler();
+	}
+	wtfconnect();
+	
+
+}
 
 //	3.2**
 void wtfpush( char* projectname ){}
@@ -297,8 +343,4 @@ void wtfhistory( char* history ){}
 //	4.1	
 void wtfrollback( char* projectname, char* version ){}
 
-//	4.1**
-void wtfupdate( char* projectname ){}
 
-//	4.2**
-void wtfupgrade( char* projectname ){}

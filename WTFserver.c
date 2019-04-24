@@ -79,7 +79,7 @@ void executeCommand(struct node* dataList){
 	if(strcmp(command, "checkout")==0){
 	
 	}else if(strcmp(command, "update")==0){
-	
+		serverUpdate(dataList);
 	}else if(strcmp(command, "upgrade")==0){
 
 	}else if(strcmp(command, "commit")==0){
@@ -101,6 +101,19 @@ void executeCommand(struct node* dataList){
 	}
 }
 
+//sends the manifest for project to client
+void serverUpdate(struct node* dataList){
+	char* projectname = dataList->next->next->name;
+	if( dirExists(projectname) == 0 ){
+		char* data = appendData("update", "Error");
+		sendData(newsockfd, data);
+	}
+	char* manifestData = readFileData(getPath(projectname, MANIFEST));
+	sendData(newsockfd, sendManifest( "update", projectname, manifestData ));
+}
+
+
+
 /*
 	<command><dataType><bytesPname><projectName>
 			<numFile><bytesfName><fName><bytefContent><fContent>..
@@ -115,12 +128,10 @@ void serverCreate(struct node* dataList){
 	
 	int exists = dirExists(projectname);
 	if( exists == 1 ){
-		printf("server120\n");
 		char* data = appendData("create", "Error");
 		sendData(newsockfd, data);
 		return;
 	}
-	
 	
 	createDir(projectname);
 	char* manifestPath = getPath(projectname, MANIFEST);
@@ -132,19 +143,8 @@ void serverCreate(struct node* dataList){
 	}
 	
 	char* manifestData = writeToManifest(manifestPath, "uptodate", 1, manifestPath, generateHash(""));
-	printf("write manifest: %s\n", manifestData );
 	
-	//TODO: could prob move to a loop+function
-	char* data = appendData("create", "ProjectFileContent"); //command, dataType
-	data = appendData(data, int2str(strlen(projectname))); //bytesPname
-	data = appendData(data, projectname); //projectName
-	data = appendData(data, int2str(1)); //numFiles
-	data = appendData(data, int2str(strlen(manifestPath))); //bytesfName
-	data = appendData(data, manifestPath); //fName
-	data = appendData(data, int2str(strlen(manifestData))); //bytefContent
-	data = appendData(data, manifestData); //Content
-	
-	sendData(newsockfd, data);
+	sendData(newsockfd, sendManifest( "create", projectname, manifestData ));
 	
 }
 

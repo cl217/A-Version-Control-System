@@ -1,5 +1,18 @@
 #include "WTFheader.h"
 
+char* sendManifest( char* command, char* projectname, char* manifestData ){
+	char* manifestPath = getPath(projectname, MANIFEST);
+	char* data = appendData(command, "ProjectFileContent"); //command, dataType
+	data = appendData(data, int2str(strlen(projectname))); //bytesPname
+	data = appendData(data, projectname); //projectName
+	data = appendData(data, int2str(1)); //numFiles
+	data = appendData(data, int2str(strlen(manifestPath))); //bytesfName
+	data = appendData(data, manifestPath); //fName
+	data = appendData(data, int2str(strlen(manifestData))); //bytefContent
+	data = appendData(data, manifestData); //Content
+	return data;
+}
+
 int sendData( int fd, char* data ){
 	int size = strlen(data);
 	write(fd, &size, sizeof(int)); //send size of data

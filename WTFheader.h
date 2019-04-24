@@ -64,17 +64,19 @@ struct node* recieveData(int);
 void sendConfirmation(int, int);
 int recieveConfirmation(int);
 struct node* splitData(char*);
+char* sendManifest( char*, char*, char*);
 
 
 /** readwrite.c **/
 char* generateHash(char*);
 char* writeToManifest(char*,char*, int, char*, char*);
-struct manifestNode* readManifest(char*);
+struct manifestNode* parseManifest(char*);
 char* readFileData(char*);
 
 /** wtfserver.c **/
 void executeCommand(struct node*);
 void serverCreate(struct node*);
+void serverUpdate(struct node*);
 
 /** wtfclient.c **/
 void exitSignalHandler(int sig_num);
