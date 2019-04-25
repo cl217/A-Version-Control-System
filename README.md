@@ -3,7 +3,7 @@ To Test
 
 IP (localhost): 127.0.0.1
 
-Port: Any between 2000-9999
+Port: Any between 8000-65535
 	
 
 

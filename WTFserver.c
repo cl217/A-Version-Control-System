@@ -79,11 +79,13 @@ void executeCommand(struct node* dataList){
 	if(strcmp(command, "checkout")==0){
 	
 	}else if(strcmp(command, "update")==0){
-		serverUpdate(dataList);
+		serverSendManifest(dataList);
+		
 	}else if(strcmp(command, "upgrade")==0){
 
 	}else if(strcmp(command, "commit")==0){
-
+		serverSendManifest(dataList);
+		serverCommit(dataList->PROJECTNAME);
 	}else if(strcmp(command, "push")==0){
 
 	}else if(strcmp(command, "create")==0){
@@ -101,51 +103,58 @@ void executeCommand(struct node* dataList){
 	}
 }
 
+void serverCommit(char* projectname){
+	struct node* dataList = recieveData(newsockfd); //gets the new commit data
+	//count num of active commits in .commit folder
+	
+	char* commitFolderPath = getPath(projectname, COMMIT);
+	int countFiles = 1;
+	DIR* dir = opendir(commitFolderPath);
+	struct dirent* entry;
+	while((entry=readdir(dir)) != NULL ){
+		if(entry->d_type == DT_REG){
+			countFiles++;
+		}
+	}
+	closedir(dir);
+	
+	int commitFD = createFile(getPath(commitFolderPath, int2str(countFiles)));
+	
+	for(int i = 0; i < strlen(dataList->FIRSTFILENODE->content); i++ ){
+		write(commitFD, &(dataList->FIRSTFILENODE->content[i]), 1);
+	}
+	close(commitFD);
+}
+
 //sends the manifest for project to client
-void serverUpdate(struct node* dataList){
-	char* projectname = dataList->next->next->name;
+void serverSendManifest(struct node* dataList){
+	char* projectname = dataList->PROJECTNAME;
+	
 	if( dirExists(projectname) == 0 ){
-		char* data = appendData("update", "Error");
+		char* data = appendData(dataList->name, "Error");
 		sendData(newsockfd, data);
 	}
 	char* manifestData = readFileData(getPath(projectname, MANIFEST));
-	sendData(newsockfd, sendManifest( "update", projectname, manifestData ));
+	sendData(newsockfd, sendManifest( dataList->name, projectname, manifestData ));
 }
 
 
-
-/*
-	<command><dataType><bytesPname><projectName>
-			<numFile><bytesfName><fName><bytefContent><fContent>..
-*/
+//Create project and manifests, sends manifest to client
 void serverCreate(struct node* dataList){
-	printf("serverCreate\n");
-	
-	//traverse(dataList);
-	
-	
-	char* projectname = dataList->next->next->name;
-	
+	char* projectname = dataList->PROJECTNAME;
 	int exists = dirExists(projectname);
 	if( exists == 1 ){
 		char* data = appendData("create", "Error");
 		sendData(newsockfd, data);
 		return;
 	}
-	
 	createDir(projectname);
+	createDir(getPath(projectname, ".version"));
+	createDir(getPath(projectname, ".commit"));
 	char* manifestPath = getPath(projectname, MANIFEST);
-	int code = createFile(manifestPath);
-	if(code==0){
-		printf("Error: manifest creation\n");
-	}else{
-		printf("manifest created\n");
-	}
-	
-	char* manifestData = writeToManifest(manifestPath, "uptodate", 1, manifestPath, generateHash(""));
-	
-	sendData(newsockfd, sendManifest( "create", projectname, manifestData ));
-	
+	newManifest(1, manifestPath);
+	writeToManifest(manifestPath, "uptodate", 1, manifestPath, generateHash(""));
+	sendData(newsockfd,sendManifest("create",projectname,readFileData(manifestPath)));
 }
 
 

@@ -1,5 +1,19 @@
 #include "WTFheader.h"
 
+//finds the lastest version of file in manifestList
+//returns the ptr to that node
+struct manifestNode* findFile( char* filepath, struct manifestNode* manifestList){
+	struct manifestNode* ptr = manifestList->next;
+	while(ptr!=NULL){
+		if(strcmp(ptr->path, filepath)==0){
+			return ptr;
+		}
+		ptr = ptr->next;
+	}
+	return NULL; //file not in manifest
+	
+}
+
 //compares file against last version of file in manifest
 int compareVersion( char* filePath, char* hash, struct manifestNode* list ){
 	struct manifestNode* ptr = list;
@@ -69,6 +83,8 @@ char* int2str(int num){
 	return str;
 }
 
+
+
 //append("dest", "src") returns "destsrc"
 char* append( char* dest, char* src ){
 	if( dest == NULL ){
@@ -108,6 +124,15 @@ char* appendData( char* dest, char* src ){
 	return newString;
 }
 
+char* appendFileData(char* data, char* filePath){
+	data = appendData(data, int2str(strlen(filePath)));
+	data = appendData(data, filePath);
+	char* fileData = readFileData(filePath);
+	data = appendData(data, int2str(strlen(fileData)));
+	data = appendData(data, fileData);
+	return data;
+}
+
 //concats: "current"+"/"+"entry"="current/entry"
 char* getPath( char* current, char* entry ){
 	char* path = (char*)malloc((strlen(current)+strlen(entry)+2)*sizeof(char));
@@ -131,18 +156,28 @@ int createDir(char* dirPath){
 	return 1; //success
 }
 
+//make sure to close file
 int createFile(char* filePath){
 	printf("filePath: %s\n", filePath);
 	int fileFD = open(filePath, O_CREAT|O_WRONLY|O_TRUNC, 0666);
 	if( fileFD < 0 ){
 		printf("error creating file\n"); return 0;
 	}
-	close(fileFD);
-	return 1;
+	return fileFD;
 }
 
 
 //temporary traverse function for testing
+void traverseFiles(struct filenode* list){
+	struct filenode* ptr = list;
+	while( ptr!= NULL ){
+		printf("folder: %s\n", ptr->folder);	
+		printf("entry: %s\n", ptr->entry);	
+		ptr = ptr->next;
+	}
+}
+
+
 void traverse(struct node* list){
 	printf("\ntraverse()\n\n");
 	struct node* ptr = list;

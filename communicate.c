@@ -6,10 +6,7 @@ char* sendManifest( char* command, char* projectname, char* manifestData ){
 	data = appendData(data, int2str(strlen(projectname))); //bytesPname
 	data = appendData(data, projectname); //projectName
 	data = appendData(data, int2str(1)); //numFiles
-	data = appendData(data, int2str(strlen(manifestPath))); //bytesfName
-	data = appendData(data, manifestPath); //fName
-	data = appendData(data, int2str(strlen(manifestData))); //bytefContent
-	data = appendData(data, manifestData); //Content
+	data = appendFileData(data, manifestPath);
 	return data;
 }
 
@@ -75,7 +72,7 @@ struct node* splitData(char* data){
 	
 	int i = 0;
 	
-	printf("splitdata: %s\n", data);
+	//printf("splitdata: %s\n", data);
 	
 	//READ IN COMMAND NODE
 	char * token = NULL;
@@ -174,7 +171,7 @@ struct node* splitData(char* data){
 			
 			//if data contains file content
 			if( strstr(type,"Content") != NULL ){
-				printf("286\n");
+				//printf("286\n");
 				//read in bytes of file content
 				token = NULL;
 				while(data[i]!='\t'){
@@ -200,6 +197,14 @@ struct node* splitData(char* data){
 
 		}
 	}
-	traverse(dataList);
+	//traverse(dataList);
 	return dataList; //return head of list
+}
+
+void sendCommandProject( int sockfd, char* command, char* projectname ){
+	char * data = appendData(command, "Project"); //command, dataType
+	data = appendData(data, int2str(strlen(projectname))); //bytesPname
+	data = appendData(data, projectname); //projectName
+	printf("Sending to server: %s\n", data);
+	sendData(sockfd, data);	
 }

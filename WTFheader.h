@@ -1,5 +1,6 @@
 #ifndef _WTFheader_h_
 #define _WTFheader_h_
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +24,12 @@
 */
 
 #define MANIFEST ".manifest"
+#define UPDATE ".update"
+#define COMMIT ".commit"
+#define MANCONTENTNODE next->next->next->next->content
+#define PROJECTNAME next->next->name
+#define FIRSTFILENODE next->next->next->next
+
 
 
 /** structures **/
@@ -43,11 +50,18 @@ struct manifestNode{
 	struct manifestNode* next;	
 };
 
+struct filenode{
+	char* folder;
+	char* entry;
+	struct filenode* next;
+
+};
 
 /** helper.c **/
 char* append(char*, char*);
 char* appendChar(char*, char);
 char* appendData(char*, char*);
+char* appendFileData(char*, char*);
 char* int2str(int);
 char* getPath(char* current, char* entry);
 int createDir(char*);
@@ -56,7 +70,7 @@ int dirExists(char*);
 int fileExists(char*);
 int compareVersion( char*, char*, struct manifestNode* );
 int neg(int);
-
+struct manifestNode* findFile(char*, struct manifestNode*);
 
 /** communicate.c **/
 int sendData(int, char*);
@@ -65,6 +79,7 @@ void sendConfirmation(int, int);
 int recieveConfirmation(int);
 struct node* splitData(char*);
 char* sendManifest( char*, char*, char*);
+void sendCommandProject( int, char*, char*);
 
 
 /** readwrite.c **/
@@ -72,11 +87,14 @@ char* generateHash(char*);
 char* writeToManifest(char*,char*, int, char*, char*);
 struct manifestNode* parseManifest(char*);
 char* readFileData(char*);
+void newManifest(int, char*);
+void writeToUpdate(int, char*, struct manifestNode*);
 
 /** wtfserver.c **/
 void executeCommand(struct node*);
 void serverCreate(struct node*);
-void serverUpdate(struct node*);
+void serverSendManifest(struct node*);
+void serverCommit(char*);
 
 /** wtfclient.c **/
 void exitSignalHandler(int sig_num);
@@ -95,10 +113,11 @@ void wtfhistory(char*);
 void wtfrollback(char* , char*);
 void wtfupdate(char*);
 void wtfupgrade(char*);
+void traverseDir(char*);
 
 
 /** testing purposes **/
 void traverse(struct node*);
-
+void traverseFiles(struct filenode*);
 
 #endif
