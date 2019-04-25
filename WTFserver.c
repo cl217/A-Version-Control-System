@@ -85,9 +85,10 @@ void executeCommand(struct node* dataList){
 
 	}else if(strcmp(command, "commit")==0){
 		serverSendManifest(dataList);
+		printf("88\n");
 		serverCommit(dataList->PROJECTNAME);
 	}else if(strcmp(command, "push")==0){
-
+		serverPush(dataList);
 	}else if(strcmp(command, "create")==0){
 		serverCreate(dataList);
 	}else if(strcmp(command, "destroy")==0){
@@ -119,23 +120,56 @@ void serverCommit(char* projectname){
 	closedir(dir);
 	
 	int commitFD = createFile(getPath(commitFolderPath, int2str(countFiles)));
-	
-	for(int i = 0; i < strlen(dataList->FIRSTFILENODE->content); i++ ){
-		write(commitFD, &(dataList->FIRSTFILENODE->content[i]), 1);
-	}
+	char* writeout = dataList->FIRSTFILENODE->content;
+	printf("%s\n", writeout);
+	write(commitFD, writeout, strlen(writeout));
 	close(commitFD);
+}
+
+void serverPush(struct node* dataList){
+	printf("projectname: %s\n", dataList->PROJECTNAME);
+	int exists = dirExists(dataList->PROJECTNAME);
+	if( exists == 0 ){
+		char* data = appendData("push", "Error");
+		sendData(newsockfd, data);
+		return;
+	}
+	
+	char* commitFPath = getPath(dataList->PROJECTNAME, COMMIT);
+	DIR* dir = opendir(commitFPath);
+	struct dirent* entry;
+	while((entry=readdir(dir)) != NULL ){
+		if(entry->d_type == DT_REG){
+			if( strcmp(dataList->FIRSTFILENODE->content, 
+					readFileData(getPath(commitFPath, entry->d_name))) == 0 ){
+				printf("commit matched\n");
+				//expire all commits
+			}
+		}
+	}
+	closedir(dir);
+	
+	//dir = opendir(dataList->PROJECTNAME);
+	
+	//copy project directory
+	char* syscommand = append("cp -r ", dataList->PROJECTNAME);
+	syscommand = append(syscommand, " .");
+	syscommand = append(syscommand, dataList->PROJECTNAME);
+	system(syscommand);
+	
+	sendData(newsockfd, appendData("push", "Success"));
 }
 
 //sends the manifest for project to client
 void serverSendManifest(struct node* dataList){
 	char* projectname = dataList->PROJECTNAME;
-	
 	if( dirExists(projectname) == 0 ){
 		char* data = appendData(dataList->name, "Error");
 		sendData(newsockfd, data);
 	}
-	char* manifestData = readFileData(getPath(projectname, MANIFEST));
-	sendData(newsockfd, sendManifest( dataList->name, projectname, manifestData ));
+	sendData(newsockfd,
+				versionData(dataList->name,projectname,getPath(projectname,MANIFEST)));
+
 }
 
 
@@ -152,9 +186,11 @@ void serverCreate(struct node* dataList){
 	createDir(getPath(projectname, ".version"));
 	createDir(getPath(projectname, ".commit"));
 	char* manifestPath = getPath(projectname, MANIFEST);
-	newManifest(1, manifestPath);
-	writeToManifest(manifestPath, "uptodate", 1, manifestPath, generateHash(""));
-	sendData(newsockfd,sendManifest("create",projectname,readFileData(manifestPath)));
+	newVersionFile(1, manifestPath);
+	
+	writeToVersionFile(manifestPath, "uptodate", 1, manifestPath, generateHash(""));
+	
+	sendData(newsockfd, versionData("create",projectname, manifestPath));
 }
 
 

@@ -232,7 +232,7 @@ void wtfcreate( char* projectname ){
 	if(manifestFD<0){
 		printf("error: opening\n");
 	}
-	write(manifestFD, fileNode->content, fileNode->bytesContent);
+	write(manifestFD, fileNode->content, strlen(fileNode->content));
 	close(manifestFD);
 }
 
@@ -261,21 +261,21 @@ void wtfadd( char* projectname, char* filename ){
 	}
 	struct manifestNode* mNode = findFile(filePath, mList);
 	if( mNode != NULL ){
-		newManifest(mList->version, manifestPath);
+		newVersionFile(mList->version, manifestPath); 
 		mList=mList->next;
 		int curVer = 0;
 		while(mList!=NULL){
 			if(strcmp(mList->path, filePath)!=0){
-				writeToManifest(manifestPath, mList->code, mList->version, mList->path, mList->hash);
+				writeToVersionFile(manifestPath, mList->code, mList->version, mList->path, mList->hash);
 			}else{
 				curVer = mList->version;
 			}	
 			mList=mList->next;
 		} 
-		writeToManifest(manifestPath, "upload", curVer, filePath, generateHash(fileText));	
+		writeToVersionFile(manifestPath, "upload", curVer, filePath, generateHash(fileText));	
 		printf("Warning: file already exists, has been overwritten\n");	
 	}else{		
-		writeToManifest(manifestPath, "upload", 1, filePath, generateHash(fileText));
+		writeToVersionFile(manifestPath, "upload", 1, filePath, generateHash(fileText));
 		printf("Success: added\n");
 	}	
 }
@@ -305,7 +305,7 @@ void wtfupdate( char* projectname ){
 	
 	char* manPath = getPath(projectname, MANIFEST);
 	
-	struct manifestNode* sMan = parseManifest(dataList->MANCONTENTNODE);
+	struct manifestNode* sMan = parseManifest(dataList->FIRSTFILENODE->content);
 	struct manifestNode* cMan = parseManifest(readFileData(manPath));
 
 	struct manifestNode* ptr = cMan->next;
@@ -384,9 +384,9 @@ void wtfcommit( char* projectname ){
 	}
 	
 	char* commitPath = getPath(projectname, COMMIT);
-	int commitFD = createFile(commitPath);
+	newVersionFile(1, commitPath);
 	
-	struct manifestNode* sMan = parseManifest(dataList-> MANCONTENTNODE);
+	struct manifestNode* sMan = parseManifest(dataList->FIRSTFILENODE->content);
 	struct manifestNode* cMan 
 				= parseManifest(readFileData(getPath(projectname, MANIFEST)));
 	
@@ -395,12 +395,8 @@ void wtfcommit( char* projectname ){
 		char* newHash = generateHash(readFileData(ptr->path));
 		struct manifestNode* sNode = findFile(ptr->path, sMan);
 		if( sNode == NULL || strcmp(sNode->hash, newHash)!=0 ){
-			ptr->version;
+			writeToVersionFile(commitPath,"upload",++(ptr->version),ptr->path,newHash);
 			ptr->hash = newHash;
-			char* str = appendData(int2str(++(ptr->version)), ptr->path);
-			str = appendData(str, newHash);
-			str = appendData(str, "\n");
-			write(commitFD, str, strlen(str));		
 		}
 		ptr=ptr->next;
 	}
@@ -409,29 +405,53 @@ void wtfcommit( char* projectname ){
 	while( ptr!=NULL ){
 		struct manifestNode* cNode = findFile(ptr->path, cMan);
 		//if difference- file in both but version sMan>cMan
-		if( cNode != NULL && strcmp(cNode->hash, ptr->hash)!=0 
-							&& ptr->version > cNode->version){
+		if(cNode==NULL){
+			writeToVersionFile(commitPath,"deleted",++(ptr->version),ptr->path,ptr->hash);
+		}else if(strcmp(cNode->hash, ptr->hash)!=0 && ptr->version > cNode->version){
 			printf("Error: Must update before commit\n");
 			remove(commitPath);
-			close(commitFD);
 			exitHandler();
 		}
 		ptr=ptr->next;
 	}
-	
 	//send commit to server
-	char* data = appendData("commit", "ProjectFileContent");
-	data = appendData(data, int2str(strlen(projectname)));
-	data = appendData(data, projectname);
-	data = appendData(data, int2str(1));
-	data = appendFileData(data, commitPath);
-	sendData(sockfd, data);
+	sendData(sockfd, versionData("commit", projectname, commitPath));
 	printf("commit sucessfully saved\n");
-	close(commitFD);
 }
 
 //	3.2**
-void wtfpush( char* projectname ){}
+void wtfpush( char* projectname ){
+	printf("wtfcommit()\n");
+	if( dirExists(projectname) == 0 ){
+		printf("Error: Project does not exist\n"); exitHandler();
+	}
+	char* commitPath = getPath(projectname, COMMIT);
+	int commitFD = open( commitPath, O_RDONLY );
+	if(commitFD < 0 ){
+		printf("Error: no commits to be pushed");
+		exitHandler();
+	}
+	close(commitFD);	
+	struct stat updateStat;
+	if(stat(getPath(projectname, UPDATE), &updateStat) > 0 && updateStat.st_size>1){
+		//if there are any M codes
+		printf("Error: Must upgrade before pushing\n"); exitHandler();
+	}	
+	
+	wtfconnect();
+	
+	//send commit to server
+	sendData(sockfd, versionData("commit", projectname, commitPath));
+	struct node* dataList = recieveData(sockfd);
+	if( strcmp(dataList->next->name, "Error")==0 ){
+		printf("Error: Project does not exist on server\n");
+		exitHandler();
+	}
+	
+	struct manifestNode* cList = parseManifest(commitPath);	
+	
+	printf("push sucessful\n");
+}
 
 //	4.1
 void wtfcurrentversion( char* projectname ){}

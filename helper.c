@@ -125,6 +125,7 @@ char* appendData( char* dest, char* src ){
 }
 
 char* appendFileData(char* data, char* filePath){
+	printf("path: %s\n", filePath);
 	data = appendData(data, int2str(strlen(filePath)));
 	data = appendData(data, filePath);
 	char* fileData = readFileData(filePath);
@@ -166,18 +167,6 @@ int createFile(char* filePath){
 	return fileFD;
 }
 
-
-//temporary traverse function for testing
-void traverseFiles(struct filenode* list){
-	struct filenode* ptr = list;
-	while( ptr!= NULL ){
-		printf("folder: %s\n", ptr->folder);	
-		printf("entry: %s\n", ptr->entry);	
-		ptr = ptr->next;
-	}
-}
-
-
 void traverse(struct node* list){
 	printf("\ntraverse()\n\n");
 	struct node* ptr = list;
@@ -194,20 +183,20 @@ void traverse(struct node* list){
 			
 		}else if(strcmp(nodeType, "project")==0){
 			printf("\tname(%s)\n", ptr->name);
-			printf("\tbytesName(%d)\n", ptr->bytesName);
+			//printf("\tbytesName(%d)\n", ptr->bytesName);
 			
 		}else if(strcmp(nodeType, "numFile")==0){
-			printf("\tbytesName(%d)\n", ptr->bytesName);
+			printf("\tname(%s)\n", ptr->name);
 			
 		}else if(strcmp(nodeType, "fileName")==0){
 			printf("\tname(%s)\n", ptr->name);
-			printf("\tbytesName(%d)\n", ptr->bytesName);
+			//printf("\tbytesName(%d)\n", ptr->bytesName);
 			
 		}else if(strcmp(nodeType, "fileContent")==0){
 			printf("\tname(%s)\n", ptr->name);
-			printf("\tbytesName(%d)\n", ptr->bytesName);
+			//printf("\tbytesName(%d)\n", ptr->bytesName);
 			printf("\tcontent(%s)\n", ptr->content);
-			printf("\tbytesContent(%d)\n", ptr->bytesContent);
+			//printf("\tbytesContent(%d)\n", ptr->bytesContent);
 		}else{
 			printf("\tinvalid node type\n");
 		}

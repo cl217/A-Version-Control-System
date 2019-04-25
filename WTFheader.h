@@ -26,8 +26,8 @@
 #define MANIFEST ".manifest"
 #define UPDATE ".update"
 #define COMMIT ".commit"
-#define MANCONTENTNODE next->next->next->next->content
 #define PROJECTNAME next->next->name
+#define NUMFILENODE next->next->next
 #define FIRSTFILENODE next->next->next->next
 
 
@@ -35,26 +35,19 @@
 /** structures **/
 struct node{
 	char* nodeType; //command, dataType, project, numFile, fileName, fileContent
-	int bytesName; //also used for numFile
-	char* name;
-	int bytesContent;
+	//int bytesName; //also used for numFile
+	char* name; //also used for numFile
+	//int bytesContent;
 	char* content;	
 	struct node* next;
 };
 
 struct manifestNode{
-	char* code; //upload, modify, deleted, uptodate
+	char* code; //upload, modify, deleted, uptodate -prob not needed
 	int version;
 	char* path;
 	char* hash;
 	struct manifestNode* next;	
-};
-
-struct filenode{
-	char* folder;
-	char* entry;
-	struct filenode* next;
-
 };
 
 /** helper.c **/
@@ -78,23 +71,25 @@ struct node* recieveData(int);
 void sendConfirmation(int, int);
 int recieveConfirmation(int);
 struct node* splitData(char*);
-char* sendManifest( char*, char*, char*);
 void sendCommandProject( int, char*, char*);
 
 
 /** readwrite.c **/
 char* generateHash(char*);
-char* writeToManifest(char*,char*, int, char*, char*);
-struct manifestNode* parseManifest(char*);
+char* writeToVersionFile(char*,char*, int, char*, char*);
+struct manifestNode* parseManifest(char*); //can be used with commit too
 char* readFileData(char*);
-void newManifest(int, char*);
+void newVersionFile(int, char*); //can be used with new commit file too
 void writeToUpdate(int, char*, struct manifestNode*);
+char* versionData( char*, char*, char*);
+
 
 /** wtfserver.c **/
 void executeCommand(struct node*);
 void serverCreate(struct node*);
 void serverSendManifest(struct node*);
 void serverCommit(char*);
+void serverPush(struct node*);
 
 /** wtfclient.c **/
 void exitSignalHandler(int sig_num);
@@ -118,6 +113,5 @@ void traverseDir(char*);
 
 /** testing purposes **/
 void traverse(struct node*);
-void traverseFiles(struct filenode*);
 
 #endif

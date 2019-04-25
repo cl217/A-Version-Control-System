@@ -1,14 +1,6 @@
 #include "WTFheader.h"
 
-char* sendManifest( char* command, char* projectname, char* manifestData ){
-	char* manifestPath = getPath(projectname, MANIFEST);
-	char* data = appendData(command, "ProjectFileContent"); //command, dataType
-	data = appendData(data, int2str(strlen(projectname))); //bytesPname
-	data = appendData(data, projectname); //projectName
-	data = appendData(data, int2str(1)); //numFiles
-	data = appendFileData(data, manifestPath);
-	return data;
-}
+
 
 int sendData( int fd, char* data ){
 	int size = strlen(data);
@@ -101,7 +93,7 @@ struct node* splitData(char* data){
 	strcpy(addThis->name, token);
 	endPtr->next=addThis; endPtr = addThis;
 	char* type = token;
-	if(strcmp(token, "Error")==0){
+	if(strcmp(token, "Error")==0 || strcmp(token, "Success")==0){
 		return dataList;
 	}
 	
@@ -116,7 +108,7 @@ struct node* splitData(char* data){
 	addThis = (struct node*)malloc(1*sizeof(struct node));
 	addThis->nodeType = "project";
 	int bytes = atoi(token);
-	addThis->bytesName = bytes;
+	//addThis->bytesName = bytes;
 	//read in project name
 	token = NULL;
 	for( int k = 0; k < bytes; k++ ){
@@ -141,7 +133,8 @@ struct node* splitData(char* data){
 		int numFile = atoi(token);
 		addThis = (struct node*)malloc(1*sizeof(struct node));
 		addThis->nodeType = "numFile";
-		addThis->bytesName = numFile;
+		//addThis->bytesName = numFile;
+		addThis->name = token;
 		endPtr->next=addThis; endPtr=addThis;
 
 		//READ IN FILES		
@@ -157,7 +150,7 @@ struct node* splitData(char* data){
 			}
 			i++;
 			int numByte = atoi(token);
-			addThis->bytesName = numByte;
+			//addThis->bytesName = numByte;
 			
 			//read in file name
 			token = NULL;
@@ -180,7 +173,7 @@ struct node* splitData(char* data){
 				}
 				i++;
 				numByte = atoi(token);
-				addThis->bytesContent = numByte;
+				//addThis->bytesContent = numByte;
 				//printf("numByte: %d\n", addThis->bytesContent);
 				
 				//read in file content

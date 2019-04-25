@@ -5,6 +5,7 @@
 //read file data
 char* readFileData(char* filePath){
 	int fileFD = open(filePath, O_RDONLY);
+	printf("rw8: %s\n", filePath);
 	if(fileFD < 0 ){
 		printf("Error: file does not exist\n"); return NULL;
 	}
@@ -23,8 +24,18 @@ char* readFileData(char* filePath){
 	return data;
 }
 
+//to send file (manifest or commit)
+char* versionData( char* command, char* projectname, char* file){
+	char* data = appendData(command, "ProjectFileContent"); //command, dataType
+	data = appendData(data, int2str(strlen(projectname))); //bytesPname
+	data = appendData(data, projectname); //projectName
+	data = appendData(data, int2str(1)); //numFiles
+	data = appendFileData(data, file);
+	return data;
+}
 
-//builds list from manifest data
+
+//builds list from version data
 //first node will be the version number
 struct manifestNode* parseManifest(char* manifestData){
 	//add node to beginning, most recent versions at the front
@@ -91,38 +102,39 @@ struct manifestNode* parseManifest(char* manifestData){
 }
 
 
-/*WRITE MANIFEST 
+/*WRITE MANIFEST/Commit
 	code - new, modified, deleted, uptodate
 	<manifestversion>
 	<\n><code><version of file><\t><filepath><\t><hashcode>
 	<\n>...
 */
-char* writeToManifest(char* manifestPath, char* code, int curVersion, char* filepath, char* hash){
+char* writeToVersionFile(char* versionPath, char* code, int curVersion, char*path, char* hash){
 
-	int manifestFD = open(manifestPath, O_WRONLY|O_APPEND);
-	if(manifestFD<0){
+	int versionFD = open(versionPath, O_WRONLY|O_APPEND);
+	if(versionFD<0){
 		printf("error: opening\n"); return NULL;
 	}
 	char* version = int2str(curVersion);
 	
 	char* mData = append("\n", code);
 	mData = appendData(mData, version);
-	mData = appendData(mData, filepath);
+	mData = appendData(mData, path);
 	mData = appendData(mData, hash);
-	write(manifestFD, mData, strlen(mData));
+	write(versionFD, mData, strlen(mData));
 	
-	close(manifestFD);
+	close(versionFD);
 	return mData;
 }
 
-void newManifest(int newVersion, char* manifestPath){
-	int manifestFD = open(manifestPath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
-	if(manifestFD<0){
-		printf("error: creating new manifest\n"); return;
+//manifest or commit
+void newVersionFile(int newVersion, char* filePath){ //remember to close
+	int fileFD = open(filePath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	if(fileFD<0){
+		printf("error: creating file\n");return;
 	}
 	char * versionStr = int2str(newVersion);
-	write(manifestFD, versionStr, strlen(versionStr)); 
-	close(manifestFD);
+	write(fileFD, versionStr, strlen(versionStr)); 
+	close(fileFD);
 }
 
 char* generateHash( char* fileData ){
