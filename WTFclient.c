@@ -439,16 +439,29 @@ void wtfpush( char* projectname ){
 	}	
 	
 	wtfconnect();
-	
-	//send commit to server
-	sendData(sockfd, versionData("commit", projectname, commitPath));
+
+	struct manifestNode* cList = parseManifest(readFileData(commitPath));
+	cList = cList->next;
+	char* data = NULL; int count = 0;
+	while( cList != NULL ){
+		//printf("448\n");
+		data = appendFileData(data, cList->path);
+		printf("%s\n", data);
+		cList = cList->next;
+		count++;
+	}
+	data = appendData(dataHeader("push", "ProjectFileContent", projectname, count), data);
+	printf("client458\n");
+	//send .commit to server
+	sendData(sockfd, data);
+	printf("client457\n");
 	struct node* dataList = recieveData(sockfd);
+	printf("client459\n");
 	if( strcmp(dataList->next->name, "Error")==0 ){
 		printf("Error: Project does not exist on server\n");
 		exitHandler();
 	}
 	
-	struct manifestNode* cList = parseManifest(commitPath);	
 	
 	printf("push sucessful\n");
 }

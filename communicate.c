@@ -177,13 +177,17 @@ struct node* splitData(char* data){
 				//printf("numByte: %d\n", addThis->bytesContent);
 				
 				//read in file content
-				token = NULL;
-				for( int m = 0; m < numByte; m++ ){
-					token = appendChar(token, data[i]);
-					i++;
+				if( numByte == 0 ){
+					addThis->content = NULL;
+				}else{
+					token = NULL;
+					for( int m = 0; m < numByte; m++ ){
+						token = appendChar(token, data[i]);
+						i++;
+					}
+					addThis->content = (char*)malloc((strlen(token)+1)*sizeof(char));
+					strcpy(addThis->content, token);
 				}
-				addThis->content = (char*)malloc((strlen(token)+1)*sizeof(char));
-				strcpy(addThis->content, token);
 				i++; //skip delimeter
 			}
 			endPtr->next=addThis; endPtr=addThis;

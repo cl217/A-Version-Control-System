@@ -62,6 +62,9 @@ void* writeToFile(int fd, char* data){
 
 char* int2str(int num){
 	int isNeg = 0;
+	if( num == 0 ){
+		return "0";
+	}
 	if( num < 0 ){
 		isNeg = 1;
 		num = -1*num;
@@ -125,8 +128,11 @@ char* appendData( char* dest, char* src ){
 }
 
 char* appendFileData(char* data, char* filePath){
-	printf("path: %s\n", filePath);
-	data = appendData(data, int2str(strlen(filePath)));
+	if(data==NULL){
+		data = int2str(strlen(filePath));
+	}else{
+		data = appendData(data, int2str(strlen(filePath)));
+	}
 	data = appendData(data, filePath);
 	char* fileData = readFileData(filePath);
 	data = appendData(data, int2str(strlen(fileData)));

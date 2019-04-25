@@ -5,7 +5,6 @@
 //read file data
 char* readFileData(char* filePath){
 	int fileFD = open(filePath, O_RDONLY);
-	printf("rw8: %s\n", filePath);
 	if(fileFD < 0 ){
 		printf("Error: file does not exist\n"); return NULL;
 	}
@@ -24,12 +23,17 @@ char* readFileData(char* filePath){
 	return data;
 }
 
-//to send file (manifest or commit)
-char* versionData( char* command, char* projectname, char* file){
-	char* data = appendData(command, "ProjectFileContent"); //command, dataType
+char* dataHeader( char* command, char* type, char* projectname, int numFile ){
+	char* data = appendData(command, type); //command, dataType
 	data = appendData(data, int2str(strlen(projectname))); //bytesPname
 	data = appendData(data, projectname); //projectName
-	data = appendData(data, int2str(1)); //numFiles
+	data = appendData(data, int2str(numFile)); //numFiles
+	return data;
+}
+
+//to send file (manifest or commit)
+char* versionData( char* command, char* projectname, char* file){
+	char* data = dataHeader(command, "ProjectFileContent", projectname, 1);
 	data = appendFileData(data, file);
 	return data;
 }
@@ -39,6 +43,7 @@ char* versionData( char* command, char* projectname, char* file){
 //first node will be the version number
 struct manifestNode* parseManifest(char* manifestData){
 	//add node to beginning, most recent versions at the front
+	//printf("parseManifest\n");
 	struct manifestNode* manifestList = NULL;
 	int i = 0;
 	char* token = NULL;

@@ -49,8 +49,6 @@ int main( int argc, char** argv ){
 	struct sockaddr_in clientAddress;
 	socklen_t clientLen = sizeof(clientAddress);
 	
-	char buffer[255]; //temporary
-
 	pid_t childpid;
 	while(1){
 		newsockfd = accept(sockfd, (struct sockaddr *) &clientAddress, &clientLen);
@@ -85,7 +83,6 @@ void executeCommand(struct node* dataList){
 
 	}else if(strcmp(command, "commit")==0){
 		serverSendManifest(dataList);
-		printf("88\n");
 		serverCommit(dataList->PROJECTNAME);
 	}else if(strcmp(command, "push")==0){
 		serverPush(dataList);
@@ -127,6 +124,7 @@ void serverCommit(char* projectname){
 }
 
 void serverPush(struct node* dataList){
+	printf("serverpush\n");
 	printf("projectname: %s\n", dataList->PROJECTNAME);
 	int exists = dirExists(dataList->PROJECTNAME);
 	if( exists == 0 ){
@@ -149,13 +147,66 @@ void serverPush(struct node* dataList){
 	}
 	closedir(dir);
 	
-	//dir = opendir(dataList->PROJECTNAME);
+	char* archivePath = getPath(dataList->PROJECTNAME, ARCHIVE);
+	dir = opendir(archivePath);
+	int countFiles = -1;
+	while((entry=readdir(dir)) != NULL ){
+		countFiles++;
+	}
+	closedir(dir);
 	
-	//copy project directory
+	//duplicate of project, .project
+	char* cpyPath = append(".", dataList->PROJECTNAME);
 	char* syscommand = append("cp -r ", dataList->PROJECTNAME);
-	syscommand = append(syscommand, " .");
-	syscommand = append(syscommand, dataList->PROJECTNAME);
+	syscommand = append(syscommand, " ");
+	syscommand = append(syscommand, cpyPath);
 	system(syscommand);
+	
+	//move to archive
+	syscommand = append("mv ", cpyPath);
+	syscommand = append(syscommand, " ");
+	cpyPath = getPath(archivePath, int2str(countFiles));
+	syscommand = append(syscommand, cpyPath);
+	system(syscommand);
+	
+	//remove all commits
+	dir = opendir(commitFPath);
+	while((entry=readdir(dir)) != NULL ){
+		if(entry->d_type == DT_REG){
+			remove(getPath(commitFPath, entry->d_name));
+		}
+	}
+	closedir(dir);
+	
+	//remove all deleted commits from list of commits
+	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
+	
+	struct manifestNode* cPtr = cList;
+	while( cPtr != NULL ){
+		//remove all deleted commits from list of commits
+		if(strcmp(cPtr->code, "deleted")==0){
+			remove(cPtr->path);		
+		}
+		cPtr = cPtr->next;
+	}
+	
+	printf("193\n");
+	//create/rewrite all the files sent
+	struct node* ptr = dataList->FIRSTFILENODE;
+	while( ptr != NULL ){
+		printf("path: %s\n", ptr->name);
+		printf("content %s\n", ptr->content);
+		
+		int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+		if( fd<0 ){
+			printf("Error: server198push");
+		}
+		if( ptr->content != NULL ){
+			write(fd, ptr->content, strlen(ptr->content));
+		}
+		close(fd);
+		ptr=ptr->next;	
+	}
 	
 	sendData(newsockfd, appendData("push", "Success"));
 }

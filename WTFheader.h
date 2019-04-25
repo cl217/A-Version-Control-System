@@ -29,6 +29,7 @@
 #define PROJECTNAME next->next->name
 #define NUMFILENODE next->next->next
 #define FIRSTFILENODE next->next->next->next
+#define ARCHIVE ".version"
 
 
 
@@ -82,6 +83,7 @@ char* readFileData(char*);
 void newVersionFile(int, char*); //can be used with new commit file too
 void writeToUpdate(int, char*, struct manifestNode*);
 char* versionData( char*, char*, char*);
+char* dataHeader( char* command, char* type, char* projectname, int numFile );
 
 
 /** wtfserver.c **/
