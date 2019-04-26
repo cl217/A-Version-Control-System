@@ -43,11 +43,10 @@ char* versionData( char* command, char* projectname, char* file){
 //first node will be the version number
 struct manifestNode* parseManifest(char* manifestData){
 	//add node to beginning, most recent versions at the front
-	//printf("parseManifest\n");
 	struct manifestNode* manifestList = NULL;
 	int i = 0;
 	char* token = NULL;
-	while( manifestData[i] != '\n' ){
+	while( i < strlen(manifestData) && manifestData[i] != '\n' ){
 		token = appendChar(token, manifestData[i++]);
 	}
 	int manVersion = atoi(token); i++; //skips newline
@@ -132,7 +131,7 @@ char* writeToVersionFile(char* versionPath, char* code, int curVersion, char*pat
 }
 
 //manifest or commit
-void newVersionFile(int newVersion, char* filePath){ //remember to close
+void newVersionFile(int newVersion, char* filePath){
 	int fileFD = open(filePath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
 	if(fileFD<0){
 		printf("error: creating file\n");return;

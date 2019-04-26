@@ -1,12 +1,5 @@
 #include "WTFheader.h"
 
-
-/*
-	./WTF configure <IP> <port> 
-	IP: 127.0.0.1 for localhost
-	Port: 1024-9999
-*/
-
 int isExit = 0;
 int sockfd = -1;
 struct filenode* filelist;
@@ -113,25 +106,7 @@ int main( int argc, char** argv ){
 		}else{
 			wtfrollback(argv[2], argv[3]);
 		}
-	}else{
-		//printf("Error: invalid argv[1]\n");
-		
-		/** Testing Purposes **/
-		/*
-		wtfconnect();
-		char buffer[255];
-		while(1){ //TODO: close on server shut down?
-	
-			printf("To Server: ");
-			fgets(buffer, 255, stdin);
-			write(sockfd, buffer, strlen(buffer));
-		
-			read(sockfd, buffer, 255);
-			printf("Server: %s\n", buffer);
-		}
-		*/
 	}
-	
 	if(sockfd > 0 ){
 		exitHandler();
 	}
@@ -275,7 +250,7 @@ void wtfadd( char* projectname, char* filename ){
 		writeToVersionFile(manifestPath, "upload", curVer, filePath, generateHash(fileText));	
 		printf("Warning: file already exists, has been overwritten\n");	
 	}else{		
-		writeToVersionFile(manifestPath, "upload", 1, filePath, generateHash(fileText));
+		writeToVersionFile(manifestPath, "upload", 0, filePath, generateHash(fileText));
 		printf("Success: added\n");
 	}	
 }
@@ -442,26 +417,41 @@ void wtfpush( char* projectname ){
 
 	struct manifestNode* cList = parseManifest(readFileData(commitPath));
 	cList = cList->next;
-	char* data = NULL; int count = 0;
+	
+	char* data = NULL; int count = 1;
+	data = appendFileData(data, commitPath);
 	while( cList != NULL ){
-		//printf("448\n");
+		printf("448: %s\n", cList->path);
 		data = appendFileData(data, cList->path);
-		printf("%s\n", data);
+		//printf("425: %s\n", data);
 		cList = cList->next;
 		count++;
 	}
+	
 	data = appendData(dataHeader("push", "ProjectFileContent", projectname, count), data);
-	printf("client458\n");
+	
+	printf("433\n");
+	
 	//send .commit to server
 	sendData(sockfd, data);
-	printf("client457\n");
+	
+	printf("436\n");
+	
 	struct node* dataList = recieveData(sockfd);
-	printf("client459\n");
 	if( strcmp(dataList->next->name, "Error")==0 ){
 		printf("Error: Project does not exist on server\n");
 		exitHandler();
 	}
 	
+	//update manifest
+	int manFD = open(getPath(projectname, MANIFEST), O_WRONLY|O_TRUNC|O_CREAT, 0666);
+	if( manFD < 0 ){
+		printf("449: Error updating manifest\n");
+	}
+	write(manFD, dataList->FIRSTFILENODE->content, strlen(dataList->FIRSTFILENODE->content));
+	close(manFD);
+	
+	remove(commitPath);
 	
 	printf("push sucessful\n");
 }

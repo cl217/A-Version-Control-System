@@ -189,20 +189,16 @@ void traverse(struct node* list){
 			
 		}else if(strcmp(nodeType, "project")==0){
 			printf("\tname(%s)\n", ptr->name);
-			//printf("\tbytesName(%d)\n", ptr->bytesName);
 			
 		}else if(strcmp(nodeType, "numFile")==0){
 			printf("\tname(%s)\n", ptr->name);
 			
 		}else if(strcmp(nodeType, "fileName")==0){
 			printf("\tname(%s)\n", ptr->name);
-			//printf("\tbytesName(%d)\n", ptr->bytesName);
 			
 		}else if(strcmp(nodeType, "fileContent")==0){
 			printf("\tname(%s)\n", ptr->name);
-			//printf("\tbytesName(%d)\n", ptr->bytesName);
 			printf("\tcontent(%s)\n", ptr->content);
-			//printf("\tbytesContent(%d)\n", ptr->bytesContent);
 		}else{
 			printf("\tinvalid node type\n");
 		}

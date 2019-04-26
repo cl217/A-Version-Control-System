@@ -39,23 +39,6 @@ int recieveConfirmation( int fd ){
 	return code;
 }
 
-
-/*	FORMAT: 
-		-delimeter to split tokens is '\t'
-		-first token will always be the command
-		-2nd token (if any) will be type of data:
-			-Project: sending project name only (create, etc)
-			-ProjectFile: sending projectName with fileName, no content (remove,destroy,etc)
-			-ProjectFileContent: sending projectName with fileNames and content 
-			-ProjectVersion: ProjectName and version
-		-3rd token 
-			-if files are sent- num of files being sent
-		
-		-For ProjectFileContent
-			<command><dataType><bytesPname><projectName>
-				<numFile><bytesfName><fName><bytefContent><fContent>...	
-			
-*/
 struct node* splitData(char* data){
 	//printf("splitData()\n");
 	

@@ -44,7 +44,7 @@ int main( int argc, char** argv ){
 		printf("Error: Can't bind.\n"); return 1;
 	}
 	
-	listen(sockfd, 10); //max num?
+	listen(sockfd, 10); //TODO: max num?
 	
 	struct sockaddr_in clientAddress;
 	socklen_t clientLen = sizeof(clientAddress);
@@ -118,12 +118,12 @@ void serverCommit(char* projectname){
 	
 	int commitFD = createFile(getPath(commitFolderPath, int2str(countFiles)));
 	char* writeout = dataList->FIRSTFILENODE->content;
-	printf("%s\n", writeout);
 	write(commitFD, writeout, strlen(writeout));
 	close(commitFD);
 }
 
 void serverPush(struct node* dataList){
+	//TODO: Revert on failure
 	printf("serverpush\n");
 	printf("projectname: %s\n", dataList->PROJECTNAME);
 	int exists = dirExists(dataList->PROJECTNAME);
@@ -134,18 +134,28 @@ void serverPush(struct node* dataList){
 	}
 	
 	char* commitFPath = getPath(dataList->PROJECTNAME, COMMIT);
+	//next->next->next->next
+	printf("commit: %s\n", dataList->next->next->next->next->name);
+	
+	
 	DIR* dir = opendir(commitFPath);
 	struct dirent* entry;
+	printf("server141\n");
 	while((entry=readdir(dir)) != NULL ){
 		if(entry->d_type == DT_REG){
+			printf("entry: %s\n", entry->d_name);
 			if( strcmp(dataList->FIRSTFILENODE->content, 
 					readFileData(getPath(commitFPath, entry->d_name))) == 0 ){
 				printf("commit matched\n");
 				//expire all commits
+			}else{
+				printf("commit not matched\n");
 			}
 		}
 	}
 	closedir(dir);
+	
+	printf("152\n");
 	
 	char* archivePath = getPath(dataList->PROJECTNAME, ARCHIVE);
 	dir = opendir(archivePath);
@@ -178,29 +188,51 @@ void serverPush(struct node* dataList){
 	}
 	closedir(dir);
 	
+	//TODO: Update version on manifest
+	char* manPath = getPath(dataList->PROJECTNAME, MANIFEST);
+	struct manifestNode* mList = parseManifest(readFileData(manPath));
+	
 	//remove all deleted commits from list of commits
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
-	
 	struct manifestNode* cPtr = cList;
 	while( cPtr != NULL ){
 		//remove all deleted commits from list of commits
 		if(strcmp(cPtr->code, "deleted")==0){
+			struct manifestNode* mNode = findFile(cPtr->path ,mList);
+			mNode->code = "deleted";
 			remove(cPtr->path);		
 		}
 		cPtr = cPtr->next;
 	}
 	
-	printf("193\n");
 	//create/rewrite all the files sent
-	struct node* ptr = dataList->FIRSTFILENODE;
+	struct node* ptr = dataList->FIRSTFILENODE->next;
 	while( ptr != NULL ){
-		printf("path: %s\n", ptr->name);
-		printf("content %s\n", ptr->content);
+		printf("212path: %s\n", ptr->name);
+		//printf("209content %s\n", ptr->content);
 		
 		int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 		if( fd<0 ){
 			printf("Error: server198push");
 		}
+		
+		struct manifestNode* cNode = findFile(ptr->name, cList);
+		struct manifestNode* mNode = findFile(ptr->name, mList);
+		if( mNode == NULL ){
+			printf("222added: %s\n", cNode->path);
+			struct manifestNode* addThis = (struct manifestNode*)malloc(1*sizeof(struct manifestNode));
+			addThis->code = "uptodate";
+			addThis->version = cNode->version;
+			addThis->path = cNode->path;
+			addThis->hash = cNode->hash;
+			addThis->next = mList->next;
+			mList->next = addThis;
+		}else{
+			mNode->code = "uptodate";
+			mNode->version = cNode->version;
+			mNode->hash = cNode->hash;
+		}
+		
 		if( ptr->content != NULL ){
 			write(fd, ptr->content, strlen(ptr->content));
 		}
@@ -208,7 +240,14 @@ void serverPush(struct node* dataList){
 		ptr=ptr->next;	
 	}
 	
-	sendData(newsockfd, appendData("push", "Success"));
+	//newVersionFile( ++(mList->version), manPath);
+	mList = mList->next;
+	while( mList != NULL ){
+		writeToVersionFile(manPath, mList->code, mList->version, mList->path, mList->hash);
+		mList = mList->next;
+	}
+	 
+	sendData(newsockfd, versionData("push", dataList->PROJECTNAME, manPath));
 }
 
 //sends the manifest for project to client
@@ -239,7 +278,7 @@ void serverCreate(struct node* dataList){
 	char* manifestPath = getPath(projectname, MANIFEST);
 	newVersionFile(1, manifestPath);
 	
-	writeToVersionFile(manifestPath, "uptodate", 1, manifestPath, generateHash(""));
+	//writeToVersionFile(manifestPath, "uptodate", 1, manifestPath, generateHash(""));
 	
 	sendData(newsockfd, versionData("create",projectname, manifestPath));
 }

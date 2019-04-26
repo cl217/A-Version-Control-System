@@ -36,9 +36,7 @@
 /** structures **/
 struct node{
 	char* nodeType; //command, dataType, project, numFile, fileName, fileContent
-	//int bytesName; //also used for numFile
 	char* name; //also used for numFile
-	//int bytesContent;
 	char* content;	
 	struct node* next;
 };
