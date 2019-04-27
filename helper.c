@@ -46,8 +46,8 @@ int dirExists(char* dirname){
 	return 1; //exists
 }
 
-int fileExists(char* fileName){
-	int fileFD =  open(fileName,O_RDONLY);
+int fileExists(char* filePath){
+	int fileFD =  open(filePath,O_RDONLY);
 	if(fileFD<0){
 		return 0; //does not exist
 	}

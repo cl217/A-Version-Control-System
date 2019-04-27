@@ -90,6 +90,7 @@ void serverCreate(struct node*);
 void serverSendManifest(struct node*);
 void serverCommit(char*);
 void serverPush(struct node*);
+void serverUpgrade(struct node*);
 
 /** wtfclient.c **/
 void exitSignalHandler(int sig_num);

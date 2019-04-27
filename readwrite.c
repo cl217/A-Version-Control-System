@@ -49,7 +49,7 @@ struct manifestNode* parseManifest(char* manifestData){
 	while( i < strlen(manifestData) && manifestData[i] != '\n' ){
 		token = appendChar(token, manifestData[i++]);
 	}
-	int manVersion = atoi(token); i++; //skips newline
+	int manVersion = atoi(token);
 	
 	while( i < strlen(manifestData) ){
 		struct manifestNode* addThis = 
@@ -57,6 +57,7 @@ struct manifestNode* parseManifest(char* manifestData){
 		token = NULL;	
 
 		//read in code
+		i++; //skips newline
 		while( manifestData[i] !='\t'){
 			token = appendChar(token, manifestData[i++]);
 		}

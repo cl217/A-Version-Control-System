@@ -78,9 +78,8 @@ void executeCommand(struct node* dataList){
 	
 	}else if(strcmp(command, "update")==0){
 		serverSendManifest(dataList);
-		
 	}else if(strcmp(command, "upgrade")==0){
-
+		serverUpgrade(dataList);
 	}else if(strcmp(command, "commit")==0){
 		serverSendManifest(dataList);
 		serverCommit(dataList->PROJECTNAME);
@@ -165,19 +164,25 @@ void serverPush(struct node* dataList){
 	}
 	closedir(dir);
 	
-	//duplicate of project, .project
+	printf("server167\n");
+	
+	//duplicate of project, .project - TODO: do this in a less lazy way
 	char* cpyPath = append(".", dataList->PROJECTNAME);
 	char* syscommand = append("cp -r ", dataList->PROJECTNAME);
 	syscommand = append(syscommand, " ");
 	syscommand = append(syscommand, cpyPath);
 	system(syscommand);
 	
-	//move to archive
+	printf("server176\n");
+	
+	//move to archive - TODO: do this in a less lazy way
 	syscommand = append("mv ", cpyPath);
 	syscommand = append(syscommand, " ");
 	cpyPath = getPath(archivePath, int2str(countFiles));
 	syscommand = append(syscommand, cpyPath);
 	system(syscommand);
+	
+	printf("server185\n");
 	
 	//remove all commits
 	dir = opendir(commitFPath);
@@ -188,22 +193,32 @@ void serverPush(struct node* dataList){
 	}
 	closedir(dir);
 	
-	//TODO: Update version on manifest
+	printf("server196\n");
+	
 	char* manPath = getPath(dataList->PROJECTNAME, MANIFEST);
 	struct manifestNode* mList = parseManifest(readFileData(manPath));
 	
+	printf("server201\n");
+	
 	//remove all deleted commits from list of commits
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
-	struct manifestNode* cPtr = cList;
+	printf("server205\n");
+	struct manifestNode* cPtr = cList->next;
+	printf("server207\n");
 	while( cPtr != NULL ){
+		printf("server209\n");
+		printf("cPtr->code: %s\n", cPtr->code);
 		//remove all deleted commits from list of commits
 		if(strcmp(cPtr->code, "deleted")==0){
+			printf("server212");
 			struct manifestNode* mNode = findFile(cPtr->path ,mList);
 			mNode->code = "deleted";
 			remove(cPtr->path);		
 		}
 		cPtr = cPtr->next;
 	}
+	
+	printf("server216\n");
 	
 	//create/rewrite all the files sent
 	struct node* ptr = dataList->FIRSTFILENODE->next;
@@ -227,7 +242,7 @@ void serverPush(struct node* dataList){
 			addThis->hash = cNode->hash;
 			addThis->next = mList->next;
 			mList->next = addThis;
-		}else{
+		}else{ 
 			mNode->code = "uptodate";
 			mNode->version = cNode->version;
 			mNode->hash = cNode->hash;
@@ -240,11 +255,15 @@ void serverPush(struct node* dataList){
 		ptr=ptr->next;	
 	}
 	
-	//newVersionFile( ++(mList->version), manPath);
-	mList = mList->next;
+	//printf("curVersion: %d\n", mList->version);
+	//remove(manPath);
+	newVersionFile( ++(mList->version), manPath);
+	mList = mList->next; 
 	while( mList != NULL ){
-		writeToVersionFile(manPath, mList->code, mList->version, mList->path, mList->hash);
-		mList = mList->next;
+		if( strcmp(mList->code, "deleted") != 0 ){
+			writeToVersionFile(manPath, mList->code, mList->version, mList->path, mList->hash);
+			mList = mList->next;
+		}
 	}
 	 
 	sendData(newsockfd, versionData("push", dataList->PROJECTNAME, manPath));
@@ -272,10 +291,11 @@ void serverCreate(struct node* dataList){
 		sendData(newsockfd, data);
 		return;
 	}
-	createDir(projectname);
-	createDir(getPath(projectname, ".version"));
-	createDir(getPath(projectname, ".commit"));
-	char* manifestPath = getPath(projectname, MANIFEST);
+	char* projectpath =  getPath(".", projectname);
+	createDir(projectpath);
+	createDir(getPath(projectpath, ARCHIVE));
+	createDir(getPath(projectpath, COMMIT));
+	char* manifestPath = getPath(projectpath, MANIFEST);
 	newVersionFile(1, manifestPath);
 	
 	//writeToVersionFile(manifestPath, "uptodate", 1, manifestPath, generateHash(""));
@@ -283,6 +303,30 @@ void serverCreate(struct node* dataList){
 	sendData(newsockfd, versionData("create",projectname, manifestPath));
 }
 
-
+void serverUpgrade(struct node* dataList){
+	int exists = dirExists(dataList->PROJECTNAME);
+	if( exists == 0 ){
+		char* data = appendData("upgrade", "Error");
+		sendData(newsockfd, data);
+		return;
+	}
+	
+	struct manifestNode* uList = parseManifest(dataList->FIRSTFILENODE->content);
+	printf("server301\n");
+	
+	char* data = NULL; int count = 0;
+	uList = uList->next;
+	while( uList != NULL ){
+		printf("path: %s\n", uList->path);
+		if( uList->code != "D" ){
+			data = appendFileData(data, uList->path);
+			count++;
+		}
+		uList = uList->next;
+	}
+	printf("filecount: %d\n", count);
+	data = appendData(dataHeader("upgrade", "ProjectFileContent", dataList->PROJECTNAME, count), data);
+	sendData(newsockfd, data);
+}
 
 
