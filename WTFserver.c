@@ -76,6 +76,7 @@ void executeCommand(struct node* dataList){
 
 	if(strcmp(command, "checkout")==0){
     serverSendManifest(dataList);
+    serverCheckout(dataList->PROJECTNAME);
 	}else if(strcmp(command, "update")==0){
 		serverSendManifest(dataList);
 	}else if(strcmp(command, "upgrade")==0){
@@ -101,7 +102,26 @@ void executeCommand(struct node* dataList){
 }
 
 void serverCheckout(char* projectname) {
+  //printf("\nx\n");
+  char * manPath = getPath(projectname,MANIFEST);
+  char * manData = readFileData(manPath);
+  struct manifestNode * manList = parseManifest(manData);
+  printf("manData: %s\n",manData);
 
+  struct manifestNode* ptr = manList->next;
+  char * fileList = "";
+  char * contentList = "";
+  printf("%s\n",ptr->hash);
+
+  //create strings: one of file list and one of content of all files
+  int fileCount = 0;
+	while( ptr != NULL ) {
+    fileList = append(fileList, ptr->path);
+    contentList = append(contentList,readFileData(ptr->path));
+    fileCount++;
+		ptr = ptr->next;
+	}
+  //printf("\nfileList: %s\ncontList: %s\n", fileList,contentList);
 }
 
 void serverCommit(char* projectname){
@@ -281,7 +301,7 @@ void serverSendManifest(struct node* dataList){
 		sendData(newsockfd, data);
 	}
 	sendData(newsockfd,
-				versionData(dataList->name,projectname,getPath(projectname,MANIFEST)));
+	versionData(dataList->name,projectname,getPath(projectname,MANIFEST)));
 
 }
 
