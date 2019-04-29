@@ -1,5 +1,23 @@
 #include "WTFheader.h"
 
+/*
+	**3.0 configure -done
+	3.1 checkout 
+	**3.2 update -done
+	**3.3 upgrade -done
+	**3.4 commit -done
+	**3.5 push -done
+	**3.6 create -done
+	3.7 destroy
+	**3.8 add -done
+	3.9 remove
+	3.10 currentversion
+	3.11 history
+	3.12 rollback
+*/
+
+
+
 int isExit = 0;
 int sockfd = -1;
 struct filenode* filelist;
@@ -258,8 +276,7 @@ void wtfadd( char* projectname, char* filename ){
 //	2.2 - remove the file from manifest (tag it as removed?)
 void wtfremove( char* projectname, char* filename ){}
 
-//	before commit** 
-//TODO: Awaiting clarifications on some things
+//	before commit** -DONE
 void wtfupdate( char* projectname ){
 	printf("wtfupdate()\n");
 	if(dirExists(projectname)==0){
@@ -342,7 +359,7 @@ void wtfupdate( char* projectname ){
 	
 }
 
-//	after update**
+//	after update**-DONE
 void wtfupgrade( char* projectname ){
 	printf("wtfupgrade()\n");
 	if(dirExists(projectname)==0){
@@ -436,7 +453,7 @@ void wtfupgrade( char* projectname ){
 	remove(getPath(projectname, UPDATE));
 }
 
-//	3.1**
+//	3.1** -DONE
 void wtfcommit( char* projectname ){
 	printf("wtfcommit()\n");
 	if( dirExists(projectname) == 0 ){
@@ -501,7 +518,7 @@ void wtfcommit( char* projectname ){
 	printf("commit sucessfully saved\n");
 }
 
-//	3.2**
+//	3.2** -DONE
 void wtfpush( char* projectname ){
 	printf("wtfcommit()\n");
 	if( dirExists(projectname) == 0 ){
