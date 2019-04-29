@@ -2,7 +2,7 @@
 
 /*
 	**3.0 configure -done
-	3.1 checkout 
+	3.1 checkout
 	**3.2 update -done
 	**3.3 upgrade -done
 	**3.4 commit -done
@@ -247,7 +247,7 @@ void wtfcheckout( char* projectname ){
 		printf("Error: Project does not exist on server\n");
 		exitHandler();
 	}
-	
+
 
 	//create project directory
 	char* projectpath =  getPath(".", projectname);
@@ -256,18 +256,6 @@ void wtfcheckout( char* projectname ){
 	char * manName = getPath(projectname, MANIFEST);
 
 
-	/*
-	struct node *ptr = dataList;
-	//get manifest
-	char * mData = NULL;
-	while (ptr!= NULL) {
-		if (strcmp(ptr->name,manName)==0) {
-			mData =  ptr->content;
-		}
-		ptr = ptr->next;
-	}
-	*/
-	
 	//get manifest node data - will be the first file node in the dataList
 	printf("firstnode: %s\n", dataList->FIRSTFILENODE->name);
 	char* mData = dataList->FIRSTFILENODE->content;
@@ -281,17 +269,18 @@ void wtfcheckout( char* projectname ){
 	write(manFD, mData, strlen(mData));
 	close(manFD);
 
-	//struct node* dataList = recieveData(sockfd);
-	printf("data recieved\n");
+	//write each file
 	struct node * fptr = dataList->FIRSTFILENODE->next;
 	while (fptr != NULL) {
-		//printf("\nnodeType: %s\n",fptr->nodeType);
-		printf("name: %s\n", fptr->name);
-		//printf("content: %s\n",fptr->content);
+		int file = open(fptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+		if(file<0){
+			printf("error: creating file\n");
+			return;
+		}
+		write(file, fptr->content, strlen(fptr->content));
+		close(file);
 		fptr = fptr->next;
-
 	}
-
 }
 
 //	2.1**
