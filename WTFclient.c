@@ -231,10 +231,10 @@ void wtfcheckout( char* projectname ){
 	}
 	//testing
 	struct node *ptr = dataList;
-	while (ptr!=NULL) {
-		printf("nodeType: %s\nname: %s\ncontent: %s\n",ptr->nodeType,ptr->name,ptr->content);
-		ptr = ptr->next;
-	}
+	// while (ptr!=NULL) {
+	// 	printf("nodeType: %s\nname: %s\ncontent: %s\n",ptr->nodeType,ptr->name,ptr->content);
+	// 	ptr = ptr->next;
+	// }
 
 	//create project directory
 	char* projectpath =  getPath(".", projectname);
@@ -265,8 +265,18 @@ void wtfcheckout( char* projectname ){
 	write(manFD, mData, strlen(mData));
 	close(manFD);
 
-	//write files
+	printf("x\n");
+	struct node * dataFileList = recieveData(sockfd);
+	//struct node* dataList = recieveData(sockfd);
+	printf("data recieved\n");
+	struct node * fptr = dataFileList;
+	while (fptr != NULL) {
+		printf("\nnodeType: %s\n",fptr->nodeType);
+		printf("name: %s\n", fptr->name);
+		printf("content: %s\n",fptr->content);
+		fptr = fptr->next;
 
+	}
 
 }
 

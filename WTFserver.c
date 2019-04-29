@@ -114,14 +114,31 @@ void serverCheckout(char* projectname) {
   printf("%s\n",ptr->hash);
 
   //create strings: one of file list and one of content of all files
-  int fileCount = 0;
-	while( ptr != NULL ) {
-    fileList = append(fileList, ptr->path);
-    contentList = append(contentList,readFileData(ptr->path));
-    fileCount++;
+  // int fileCount = 0;
+	// while( ptr != NULL ) {
+  //   fileList = append(fileList, ptr->path);
+  //   contentList = append(contentList,readFileData(ptr->path));
+  //   fileCount++;
+	// 	ptr = ptr->next;
+	// }
+
+
+	char* data = NULL;
+	int count = 1;
+	//data = appendFileData(data, commitPath);
+	while( ptr != NULL ){
+		printf("448: %s\n", ptr->path);
+		data = appendFileData(data, ptr->path);
+		//printf("425: %s\n", data);
 		ptr = ptr->next;
+		count++;
 	}
-  //printf("\nfileList: %s\ncontList: %s\n", fileList,contentList);
+
+	data = appendData(dataHeader("checkout", "ProjectFileContent", projectname, count), data);
+	sendData(newsockfd, data);
+	printf("checkout file sent\n");
+
+  printf("\ndata: %s\n", data);
 }
 
 void serverCommit(char* projectname){
@@ -326,6 +343,9 @@ void serverCreate(struct node* dataList){
 
 	sendData(newsockfd, versionData("create",projectname, manifestPath));
 }
+
+
+
 
 void serverUpgrade(struct node* dataList){
 	int exists = dirExists(dataList->PROJECTNAME);
