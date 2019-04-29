@@ -75,7 +75,6 @@ void executeCommand(struct node* dataList){
 	char* command = dataList->name;
 
 	if(strcmp(command, "checkout")==0){
-    		serverSendManifest(dataList);
     		serverCheckout(dataList->PROJECTNAME);
 	}else if(strcmp(command, "update")==0){
 		serverSendManifest(dataList);
