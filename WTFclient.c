@@ -247,23 +247,17 @@ void wtfcheckout( char* projectname ){
 		printf("Error: Project does not exist on server\n");
 		exitHandler();
 	}
-	//testing
-	struct node *ptr = dataList;
-	// while (ptr!=NULL) {
-	// 	printf("nodeType: %s\nname: %s\ncontent: %s\n",ptr->nodeType,ptr->name,ptr->content);
-	// 	ptr = ptr->next;
-	// }
+	
 
 	//create project directory
 	char* projectpath =  getPath(".", projectname);
 	createDir(projectpath);
-	createDir(getPath(projectpath, ARCHIVE));
-	createDir(getPath(projectpath, COMMIT));
 	char* manifestPath = getPath(projectpath, MANIFEST);
+	char * manName = getPath(projectname, MANIFEST);
 
-	ptr = dataList;
 
-	char * manName = strcat(projectname,"/.manifest");
+	
+	struct node *ptr = dataList;
 
 	//get manifest
 	char * mData = NULL;
@@ -284,7 +278,7 @@ void wtfcheckout( char* projectname ){
 	close(manFD);
 
 	printf("x\n");
-	struct node * dataFileList = recieveData(sockfd);
+	struct node * dataFileList = recieveData(sockfd); //breaks here
 	//struct node* dataList = recieveData(sockfd);
 	printf("data recieved\n");
 	struct node * fptr = dataFileList;

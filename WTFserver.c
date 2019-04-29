@@ -102,34 +102,32 @@ void executeCommand(struct node* dataList){
 }
 
 void serverCheckout(char* projectname) {
-  //printf("\nx\n");
-  char * manPath = getPath(projectname,MANIFEST);
-  char * manData = readFileData(manPath);
-  struct manifestNode * manList = parseManifest(manData);
-  printf("manData: %s\n",manData);
 
-  struct manifestNode* ptr = manList->next;
-  char * fileList = "";
-  char * contentList = "";
-  printf("%s\n",ptr->hash);
+	int exists = dirExists(projectname);
+	if( exists == 0 ){
+		char* data = appendData("checkout", "Error");
+		sendData(newsockfd, data);
+		return;
+	}
 
-  //create strings: one of file list and one of content of all files
-  // int fileCount = 0;
-	// while( ptr != NULL ) {
-  //   fileList = append(fileList, ptr->path);
-  //   contentList = append(contentList,readFileData(ptr->path));
-  //   fileCount++;
-	// 	ptr = ptr->next;
-	// }
-
-
+	//Read in server's manifest data
+	char * manPath = getPath(projectname,MANIFEST);
+	char * manData = readFileData(manPath);
+	struct manifestNode * manList = parseManifest(manData);
+	//printf("manData: %s\n",manData);
+	
+	struct manifestNode* ptr = manList->next;
+	char * fileList = "";
+	char * contentList = "";
+	//printf("%s\n",ptr->hash);
+ 
+	//make data to send to client
 	char* data = NULL;
 	int count = 1;
-	//data = appendFileData(data, commitPath);
+	data = appendFileData(data, manPath);
 	while( ptr != NULL ){
 		printf("448: %s\n", ptr->path);
 		data = appendFileData(data, ptr->path);
-		//printf("425: %s\n", data);
 		ptr = ptr->next;
 		count++;
 	}
