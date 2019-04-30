@@ -279,15 +279,26 @@ void wtfcheckout( char* projectname ){
 	struct node * fptr = dataList->FIRSTFILENODE->next;
 	while (fptr != NULL) {
 		printf("creating: %s\n", fptr->name);
-		int file = open(fptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666);
-		if(file<0){
-			printf("error: creating file\n");
-			return;
+		
+		int fd = open( fptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+		if( fd<0 ){ //can't open, have to create dirs then retry
+			printf("Creating: %s\n", fptr->name);
+			char* tempPath = (char*)malloc((strlen(fptr->name)+1)*sizeof(char));
+			strcpy(tempPath, fptr->name);
+			createSubdir(tempPath);
+			fd = open( fptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+			if( fd<0){
+				printf("Error creating: %s\n", fptr->name);
+				return;
+			}else{
+				printf("Created: %s\n", fptr->name);
+			}
 		}
+		
 		if( fptr->content != NULL ){
-			write(file, fptr->content, strlen(fptr->content));
+			write(fd, fptr->content, strlen(fptr->content));
 		}
-		close(file);
+		close(fd);
 		fptr = fptr->next;
 	}
 }
@@ -471,10 +482,22 @@ void wtfupgrade( char* projectname ){
 
 	while( ptr != NULL ){
 		//printf("209content %s\n", ptr->content);
+
 		int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
-		if( fd<0 ){
-			printf("Error: 376clientupgrade");
+		if( fd<0 ){ //can't open, have to create dirs then retry
+			printf("Creating: %s\n", ptr->name);
+			char* tempPath = (char*)malloc((strlen(ptr->name)+1)*sizeof(char));
+			strcpy(tempPath, ptr->name);
+			createSubdir(tempPath);
+			fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+			if( fd<0){
+				printf("Error creating: %s\n", ptr->name);
+				return;
+			}else{
+				printf("Created: %s\n", ptr->name);
+			}
 		}
+
 		struct manifestNode* uNode = findFile(ptr->name, uList);
 		struct manifestNode* mNode = findFile(ptr->name, mList);
 		if( mNode == NULL ){

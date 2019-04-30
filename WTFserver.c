@@ -212,6 +212,7 @@ void serverPush(struct node* dataList){
 		printf("Error: Please commit before pushing\n");
 		return;
 	}
+	printf("server215: commit found\n");
 
 	char* archivePath = getPath(dataList->PROJECTNAME, ARCHIVE);
 	dir = opendir(archivePath);
@@ -263,7 +264,6 @@ void serverPush(struct node* dataList){
 	//create/rewrite all the files sent
 	struct node* ptr = dataList->FIRSTFILENODE->next;
 	while( ptr != NULL ){
-	
 		int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 		if( fd<0 ){ //can't open, have to create dirs then retry
 			printf("Creating: %s\n", ptr->name);
