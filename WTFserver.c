@@ -187,9 +187,6 @@ void serverCommit(char* projectname){
 }
 
 void serverPush(struct node* dataList){
-	//TODO: Revert on failure
-	printf("serverpush\n");
-	printf("projectname: %s\n", dataList->PROJECTNAME);
 	int exists = dirExists(dataList->PROJECTNAME);
 	if( exists == 0 ){
 		char* data = appendData("push", "Error");
@@ -198,28 +195,23 @@ void serverPush(struct node* dataList){
 	}
 
 	char* commitFPath = getPath(dataList->PROJECTNAME, COMMIT);
-	//next->next->next->next
-	printf("commit: %s\n", dataList->next->next->next->next->name);
 
-
+	int commitFound = 0;
 	DIR* dir = opendir(commitFPath);
 	struct dirent* entry;
-	printf("server141\n");
 	while((entry=readdir(dir)) != NULL ){
 		if(entry->d_type == DT_REG){
-			printf("entry: %s\n", entry->d_name);
 			if( strcmp(dataList->FIRSTFILENODE->content,
 					readFileData(getPath(commitFPath, entry->d_name))) == 0 ){
-				printf("commit matched\n");
-				//expire all commits
-			}else{
-				printf("commit not matched\n");
+				commitFound = 1;
 			}
 		}
 	}
 	closedir(dir);
-
-	printf("152\n");
+	if( commitFound == 0 ){
+		printf("Error: Please commit before pushing\n");
+		return;
+	}
 
 	char* archivePath = getPath(dataList->PROJECTNAME, ARCHIVE);
 	dir = opendir(archivePath);
@@ -229,8 +221,6 @@ void serverPush(struct node* dataList){
 	}
 	closedir(dir);
 
-	printf("server167\n");
-
 	//duplicate of project, .project - TODO: do this in a less lazy way
 	char* cpyPath = append(".", dataList->PROJECTNAME);
 	char* syscommand = append("cp -r ", dataList->PROJECTNAME);
@@ -238,16 +228,12 @@ void serverPush(struct node* dataList){
 	syscommand = append(syscommand, cpyPath);
 	system(syscommand);
 
-	printf("server176\n");
-
 	//move to archive - TODO: do this in a less lazy way
 	syscommand = append("mv ", cpyPath);
 	syscommand = append(syscommand, " ");
 	cpyPath = getPath(archivePath, int2str(countFiles));
 	syscommand = append(syscommand, cpyPath);
 	system(syscommand);
-
-	printf("server185\n");
 
 	//remove all commits
 	dir = opendir(commitFPath);
@@ -258,24 +244,15 @@ void serverPush(struct node* dataList){
 	}
 	closedir(dir);
 
-	printf("server196\n");
-
 	char* manPath = getPath(dataList->PROJECTNAME, MANIFEST);
 	struct manifestNode* mList = parseManifest(readFileData(manPath));
 
-	printf("server201\n");
-
 	//remove all deleted commits from list of commits
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
-	printf("server205\n");
 	struct manifestNode* cPtr = cList->next;
-	printf("server207\n");
 	while( cPtr != NULL ){
-		printf("server209\n");
-		printf("cPtr->code: %s\n", cPtr->code);
 		//remove all deleted commits from list of commits
 		if(strcmp(cPtr->code, "deleted")==0){
-			printf("server212");
 			struct manifestNode* mNode = findFile(cPtr->path ,mList);
 			mNode->code = "deleted";
 			remove(cPtr->path);
@@ -283,23 +260,29 @@ void serverPush(struct node* dataList){
 		cPtr = cPtr->next;
 	}
 
-	printf("server216\n");
-
 	//create/rewrite all the files sent
 	struct node* ptr = dataList->FIRSTFILENODE->next;
 	while( ptr != NULL ){
-		printf("212path: %s\n", ptr->name);
-		//printf("209content %s\n", ptr->content);
-
+	
 		int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
-		if( fd<0 ){
-			printf("Error: server198push");
+		if( fd<0 ){ //can't open, have to create dirs then retry
+			printf("Creating: %s\n", ptr->name);
+			char* tempPath = (char*)malloc((strlen(ptr->name)+1)*sizeof(char));
+			strcpy(tempPath, ptr->name);
+			createSubdir(tempPath);
+			fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+			if( fd<0){
+				printf("Error creating: %s\n", ptr->name);
+				return;
+			}else{
+				printf("Created: %s\n", ptr->name);
+			}
 		}
+		
 
 		struct manifestNode* cNode = findFile(ptr->name, cList);
 		struct manifestNode* mNode = findFile(ptr->name, mList);
 		if( mNode == NULL ){
-			printf("222added: %s\n", cNode->path);
 			struct manifestNode* addThis = (struct manifestNode*)malloc(1*sizeof(struct manifestNode));
 			addThis->code = "uptodate";
 			addThis->version = cNode->version;

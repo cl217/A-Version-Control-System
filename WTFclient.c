@@ -263,7 +263,7 @@ void wtfcheckout( char* projectname ){
 
 
 	//get manifest node data - will be the first file node in the dataList
-	printf("firstnode: %s\n", dataList->FIRSTFILENODE->name);
+	//printf("firstnode: %s\n", dataList->FIRSTFILENODE->name);
 	char* mData = dataList->FIRSTFILENODE->content;
 
 	//write manifest
@@ -278,12 +278,15 @@ void wtfcheckout( char* projectname ){
 	//write each file
 	struct node * fptr = dataList->FIRSTFILENODE->next;
 	while (fptr != NULL) {
+		printf("creating: %s\n", fptr->name);
 		int file = open(fptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666);
 		if(file<0){
 			printf("error: creating file\n");
 			return;
 		}
-		write(file, fptr->content, strlen(fptr->content));
+		if( fptr->content != NULL ){
+			write(file, fptr->content, strlen(fptr->content));
+		}
 		close(file);
 		fptr = fptr->next;
 	}
@@ -599,17 +602,19 @@ void wtfpush( char* projectname ){
 	char* data = NULL; int count = 1;
 	data = appendFileData(data, commitPath);
 	while( cList != NULL ){
-		printf("448: %s\n", cList->path);
+		printf("605: %s\n", cList->path);
 		data = appendFileData(data, cList->path);
-		//printf("425: %s\n", data);
+		printf("607: %s\n", data);
 		cList = cList->next;
 		count++;
 	}
+	printf("611\n");
 
 	data = appendData(dataHeader("push", "ProjectFileContent", projectname, count), data);
 
 	//send .commit to server
 	sendData(sockfd, data);
+	printf("617\n");
 
 	struct node* dataList = recieveData(sockfd);
 	if( strcmp(dataList->next->name, "Error")==0 ){

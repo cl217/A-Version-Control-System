@@ -1,5 +1,20 @@
 #include "WTFheader.h"
 
+//recursive mkdir
+void createSubdir(char* path){
+	if( strstr(path, "/") != NULL ){
+		char* dir = dirname(path);
+		char* parent = (char*)malloc((strlen(dir)+1)*sizeof(char));
+		strcpy(parent, dir);	
+		createSubdir(parent);
+	}
+	DIR* dir = opendir(path);
+	if( dir == NULL ){
+		mkdir(path, 0700);
+	}
+	closedir(dir);
+}
+
 //finds the lastest version of file in manifestList
 //returns the ptr to that node
 struct manifestNode* findFile( char* filepath, struct manifestNode* manifestList){

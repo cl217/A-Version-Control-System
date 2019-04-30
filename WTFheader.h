@@ -16,11 +16,11 @@
 #include <math.h>
 #include <dirent.h>
 #include <openssl/sha.h>
+#include <libgen.h>
 
 /*
 #include <arpa/inet.h>
 #include <ctype.h>
-#include <libgen.h>
 */
 
 #define MANIFEST ".manifest"
@@ -50,6 +50,7 @@ struct manifestNode{
 };
 
 /** helper.c **/
+
 char* append(char*, char*);
 char* appendChar(char*, char);
 char* appendData(char*, char*);
@@ -59,6 +60,7 @@ char* getPath(char* current, char* entry);
 int createDir(char*);
 int createFile(char*);
 int dirExists(char*);
+void createSubdir(char*);
 int fileExists(char*);
 int compareVersion( char*, char*, struct manifestNode* );
 int neg(int);
