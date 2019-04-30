@@ -88,7 +88,7 @@ void executeCommand(struct node* dataList){
 	}else if(strcmp(command, "create")==0){
 		serverCreate(dataList);
 	}else if(strcmp(command, "destroy")==0){
-
+		serverDestroy(dataList->PROJECTNAME);
 	}else if(strcmp(command, "currentversion")==0){
 
 	}else if(strcmp(command, "history")==0){
@@ -100,6 +100,32 @@ void executeCommand(struct node* dataList){
 	}
 }
 
+void serverDestroy(char* projectname) {
+	//TODO:Lock repository when called
+
+	char * path = getPath(".",projectname);
+
+	struct dirent *file;
+	DIR *direc = opendir(path);
+
+  if (direc == NULL)  {
+      printf("Could not open directory" );
+      return;
+  }
+
+  while ((file = readdir(direc)) != NULL) {
+      printf("%s\n", file->d_name);
+			char * filepath = getPath(projectname,file->d_name);
+			printf("%s\n",filepath);
+			if ( remove(filepath)==0) {
+				printf("file removed\n");
+			} else {
+				printf("remove failed\n");
+			}
+	}
+  closedir(direc);
+}
+
 void serverCheckout(char* projectname) {
 
 	int exists = dirExists(projectname);
@@ -107,6 +133,7 @@ void serverCheckout(char* projectname) {
 		char* data = appendData("checkout", "Error");
 		sendData(newsockfd, data);
 		return;
+
 	}
 
 	//Read in server's manifest data
@@ -114,12 +141,12 @@ void serverCheckout(char* projectname) {
 	char * manData = readFileData(manPath);
 	struct manifestNode * manList = parseManifest(manData);
 	//printf("manData: %s\n",manData);
-	
+
 	struct manifestNode* ptr = manList->next;
 	char * fileList = "";
 	char * contentList = "";
 	//printf("%s\n",ptr->hash);
- 
+
 	//make data to send to client
 	char* data = NULL;
 	int count = 1;

@@ -7,9 +7,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <netinet/in.h> 
+#include <netinet/in.h>
 #include <netdb.h>
-#include <string.h> 
+#include <string.h>
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
@@ -37,7 +37,7 @@
 struct node{
 	char* nodeType; //command, dataType, project, numFile, fileName, fileContent
 	char* name; //also used for numFile
-	char* content;	
+	char* content;
 	struct node* next;
 };
 
@@ -46,7 +46,7 @@ struct manifestNode{
 	int version;
 	char* path;
 	char* hash;
-	struct manifestNode* next;	
+	struct manifestNode* next;
 };
 
 /** helper.c **/
@@ -92,6 +92,9 @@ void serverCommit(char*);
 void serverPush(struct node*);
 void serverUpgrade(struct node*);
 void serverCheckout(char*);
+void serverDestroy(char * projectname);
+
+
 
 /** wtfclient.c **/
 void exitSignalHandler(int sig_num);

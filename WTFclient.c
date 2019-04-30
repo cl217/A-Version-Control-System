@@ -230,7 +230,13 @@ void wtfcreate( char* projectname ){
 }
 
 //	1.2
-void wtfdestroy( char* projectname ){}
+void wtfdestroy( char* projectname ){
+	printf("wtfdestroy()\n");
+
+	wtfconnect(); //shuts down program if cant connect
+
+	sendCommandProject(sockfd, "destroy", projectname);
+}
 
 //	1.2
 void wtfcheckout( char* projectname ){
