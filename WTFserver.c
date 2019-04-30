@@ -111,15 +111,17 @@ void serverDestroy(char* projectname) {
 		return;
 	}
 	
-	while ((file = readdir(direc)) != NULL) {
-		printf("%s\n", file->d_name);
-			char * filepath = getPath(path,file->d_name);
-			printf("%s\n",filepath);
-			if ( remove(filepath)==0) {
-				printf("file removed\n");
-			} else {
-				printf("remove failed\n");
+	 while ((file = readdir(direc)) != NULL) {
+	 	char * filepath = getPath(projectname,file->d_name);
+	 	if (dirExists(filepath)) {
+	 		if ((strcmp(file->d_name,".") != 0) && (strcmp(file->d_name, "..") != 0)) {
+	 			serverDestroy(filepath);
 			}
+		}
+		printf("%s\n",filepath);
+		if ( remove(filepath)==0) {
+			printf("file removed\n");
+		}
 	}
 	closedir(direc);
 	
@@ -272,7 +274,12 @@ void serverPush(struct node* dataList){
 				return;
 			}
 		}
+<<<<<<< HEAD
 		
+=======
+
+
+>>>>>>> 77c1353d1770ccad9707072bed1551e8908c30a2
 		struct manifestNode* cNode = findFile(ptr->name, cList);
 		struct manifestNode* mNode = findFile(ptr->name, mList);
 		if( mNode == NULL ){

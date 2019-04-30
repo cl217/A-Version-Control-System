@@ -1,6 +1,10 @@
 #include "WTFheader.h"
 
 
+void destroyRecursive(char* path){
+
+}
+
 void copydir(char* srcPath, char*destPath){
 	DIR * dir = opendir(srcPath);
 	struct dirent * entry;
