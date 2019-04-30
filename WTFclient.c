@@ -2,14 +2,16 @@
 
 /*
 	**3.0 configure -done
-	3.1 checkout
+	3.1 checkout - done
 	**3.2 update -done
 	**3.3 upgrade -done
 	**3.4 commit -done
-	**3.5 push -done
+	**3.5 push TODO: LOCK
 	**3.6 create -done
-	3.7 destroy
+	3.7 destroy TODO: LOCK
 	**3.8 add -done
+	
+	
 	3.9 remove
 	3.10 currentversion
 	3.11 history
@@ -131,8 +133,10 @@ int main( int argc, char** argv ){
 	return 0;
 }
 
-/** Connect function for all commands that communicates with server**/
-void wtfconnect(){
+/** Connect function for all commands that communicates with server
+	Shuts program down if can't connect
+**/
+void wtfconnect(){ 
 	//open to read from .configure file
 	int configFile = open("./.configure", O_RDONLY);
 	if( configFile == -1 ){
@@ -164,28 +168,36 @@ void wtfconnect(){
 	}
 	printf("Status: new client created\n");
 
-	//FIND SERVER
+	//FIND HOST
 	if(server==NULL){
 		printf("Error: host not found\n"); exitHandler();
 	}
 	printf("Status: host found\n");
 
-	//CONNECT TO SERVER
-	//TODO: LOOP TRY TO CONNECT EVERY 3 SECONDS UNTIL CONNECTED OR KILLED
+	//Connection setup	
 	struct sockaddr_in serverAddr;
 	serverAddr.sin_family = AF_INET;
 	char* tempstr = (char*)malloc(sizeof(&server->h_addr_list[0])+1);
 	memcpy(&serverAddr.sin_addr.s_addr, server->h_addr_list[0], sizeof(server->h_addr_list[0]));
 	serverAddr.sin_port = htons(port);
-	if(connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr))<0){
-		printf("Error: connection failed\n");
-		exitHandler();
-	}else{
-		printf("Status: connected to server\n");
+	
+	//CONNECT TO SERVER
+	int connected = 0;
+	while( connected == 0 ){
+		if(connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr))>=0){
+			printf("Status: connected to server\n");
+			connected = 1;
+		}else{
+			sleep(3);
+			printf("Trying to connect..\n");
+		}
 	}
 }
 
-//1.0**
+
+/**
+	Saves ip and port to .configure file
+**/
 void wtfconfigure( char* ip, char* port){
 	int file = open( "./.configure", O_CREAT | O_WRONLY | O_TRUNC, 0777 );
 	if( file < 0 ){
@@ -197,131 +209,159 @@ void wtfconfigure( char* ip, char* port){
 	close(file);
 }
 
-/*
-	<command><dataType><bytesPname><projectName>
-			<numFile><bytesfName><fName><bytefContent><fContent>..
-*/
 
-//	1.1**
+/**
+	Creates project+intiates manifest on server, copies manifest to client
+	Creates project folder on client if doesnt already exist
+	Fails if:
+		-Project already on server
+**/
 void wtfcreate( char* projectname ){
-	wtfconnect();
 
-	sendCommandProject(sockfd, "create", projectname);
-
-	struct node* dataList = recieveData(sockfd);
+	wtfconnect(); //connects to server
+	
+	sendCommandProject(sockfd, "create", projectname); //sends data to server
+	struct node* dataList = receiveData(sockfd); //receives data from server
 
 	if( strcmp(dataList->next->name, "Error")==0 ){ //project already exists
-		printf("Error: Project already exists on server.\n");
+		printf("Error: %s\n", dataList->next->content);	
 		exitHandler();
 	}
-
-	//TODO: could move to a function
-	struct node* projectNode = dataList->next->next;
-	char* dirPath = getPath(".", projectNode->name);
-	createDir(dirPath);
-	struct node* fileNode = projectNode->next->next;
-
-	int manifestFD = open(fileNode->name, O_WRONLY|O_CREAT|O_APPEND, 0666);
-	if(manifestFD<0){
-		printf("error: opening\n");
+	
+	//creates project folder if doesn't already exist
+	char* projectPath = getPath(".", dataList->PROJECTNAME);
+	if( dirExists(projectPath) == 0 ){
+		createDir(projectPath);
 	}
-	write(manifestFD, fileNode->content, strlen(fileNode->content));
+	
+	//copies manifest to client
+	struct node* manNode = dataList->FIRSTFILENODE; //get node of manifest data
+	int manifestFD = open(manNode->name, O_WRONLY|O_CREAT|O_APPEND, 0666);
+	if(manifestFD<0){
+		printf("error: creating manifest\n"); exitHandler();
+	}
+	write(manifestFD, manNode->content, strlen(manNode->content));
 	close(manifestFD);
+	
+	printf("Status: create successful\n");
 }
 
-//	1.2
+
+/*
+	Destroys project folder + all subdirectories and files on server
+	Keeps everything on client
+	Fails if:
+		Project not on server
+*/	
 void wtfdestroy( char* projectname ){
-	printf("wtfdestroy()\n");
-
+	
 	wtfconnect(); //shuts down program if cant connect
-
+	
 	sendCommandProject(sockfd, "destroy", projectname);
+	
+	//Error check, project not on server
+	struct node* dataList = receiveData(sockfd);
+	if( strcmp(dataList->next->name, "Error")==0 ){
+		printf("Error: %s\n", dataList->next->content);	
+		exitHandler();
+	}
+	
+	printf("Status: project destroyed on server\n");
+	
 }
 
-//	1.2
+/*
+	Downloads latest copy of project onto client
+	Fails if:
+		-Not on server
+		-Already on client
+*/
 void wtfcheckout( char* projectname ){
-	printf("wtfcheckout()\n");
-	if(dirExists(projectname)!=0){
+	
+	char* projectPath = getPath(".", projectname);
+	
+	//Error check- project already on client
+	if(dirExists(projectPath)!=0){
 		printf("Error: Project already exists locally\n"); exitHandler();
 	}
 	wtfconnect(); //shuts down program if cant connect
-
+	
+	//Sends and receives data from server
 	sendCommandProject(sockfd, "checkout", projectname);
-
-	struct node* dataList = recieveData(sockfd);
+	struct node* dataList = receiveData(sockfd);
+	
+	//Errorcheck - project not on server
 	if( strcmp(dataList->next->name, "Error")==0 ){
-		printf("Error: Project does not exist on server\n");
+		printf("Error: %s\n", dataList->next->content);	
 		exitHandler();
 	}
 
-
 	//create project directory
-	char* projectpath =  getPath(".", projectname);
-	createDir(projectpath);
-	char* manifestPath = getPath(projectpath, MANIFEST);
-	char * manName = getPath(projectname, MANIFEST);
+	createDir(projectPath);
+	char* manPath = getPath(projectPath, MANIFEST);
 
-
-	//get manifest node data - will be the first file node in the dataList
-	//printf("firstnode: %s\n", dataList->FIRSTFILENODE->name);
+	//get manifest node data from server - will be the first file node in the dataList
 	char* mData = dataList->FIRSTFILENODE->content;
 
-	//write manifest
-	int manFD = open(manName, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	//write client's manifest
+	int manFD = open(manPath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
 	if(manFD<0){
-		printf("error1: opening\n");
+		printf("Status: Error opening manifest\n");
 		return;
 	}
 	write(manFD, mData, strlen(mData));
 	close(manFD);
 
-	//write each file
+	//write each file to client's project
 	struct node * fptr = dataList->FIRSTFILENODE->next;
 	while (fptr != NULL) {
-		printf("creating: %s\n", fptr->name);
-		
 		int fd = open( fptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
-		if( fd<0 ){ //can't open, have to create dirs then retry
-			printf("Creating: %s\n", fptr->name);
+		//can't open, have to create nonexisting subdirs then retry
+		if( fd<0 ){
 			char* tempPath = (char*)malloc((strlen(fptr->name)+1)*sizeof(char));
 			strcpy(tempPath, fptr->name);
 			createSubdir(tempPath);
-			fd = open( fptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
-			if( fd<0){
+			fd = open( fptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 ); //retry opening file
+			if( fd<0){ //should not happen
 				printf("Error creating: %s\n", fptr->name);
 				return;
-			}else{
-				printf("Created: %s\n", fptr->name);
 			}
 		}
-		
 		if( fptr->content != NULL ){
 			write(fd, fptr->content, strlen(fptr->content));
 		}
 		close(fd);
 		fptr = fptr->next;
 	}
+	
+	printf("Status: checkout successful\n");
 }
 
-//	2.1**
-//client adds file to own manifest -DONE
+/**
+	Adds file to client manifest
+**/
 void wtfadd( char* projectname, char* filename ){
-	printf("wtfadd()\n");
-	if( dirExists(projectname) == 0 ){
+	char* projectPath =  getPath(".", projectname);
+	//Error checks
+	if( dirExists(projectPath) == 0 ){ //project does not exist
 		printf("Error: Project does not exist\n"); exitHandler();
 	}
-	char* filePath = getPath(projectname, filename);
+	char* filePath = getPath(projectPath, filename);
 	char* fileText = readFileData(filePath);
-	if( fileText == NULL ){
+	if( fileText == NULL ){ //file does not exist
 		exitHandler();
 	}
-	char* manifestPath = getPath(projectname, MANIFEST);
+	
+	//Get manifest
+	char* manifestPath = getPath(projectPath, MANIFEST);
 	struct manifestNode* mList = parseManifest(readFileData(manifestPath));
-	if( mList == NULL ){
-		exitHandler();
+	if( mList == NULL ){ //error check- manifest does not exist
+		exitHandler(); 
 	}
+	
 	struct manifestNode* mNode = findFile(filePath, mList);
-	if( mNode != NULL ){
+	if( mNode != NULL ){ //If file already in manifest
+		//rewrite manifest, updating hash of file
 		newVersionFile(mList->version, manifestPath);
 		mList=mList->next;
 		int curVer = 0;
@@ -335,50 +375,67 @@ void wtfadd( char* projectname, char* filename ){
 		}
 		writeToVersionFile(manifestPath, "upload", curVer, filePath, generateHash(fileText));
 		printf("Warning: file already exists, hash has been updated\n");
-	}else{
+	}else{ //File not already in manifest
+		//add file to end of manifest
 		writeToVersionFile(manifestPath, "upload", 0, filePath, generateHash(fileText));
-		printf("Success: added\n");
+		printf("Status: add successful\n");
 	}
 }
+
+
 
 //	2.2 - remove the file from manifest (tag it as removed?)
 void wtfremove( char* projectname, char* filename ){}
 
-//	before commit** -DONE
+
+
+
+
+
+/**
+	Compares server and client's manifest
+	Documents file changes that the server is ahead on
+**/
 void wtfupdate( char* projectname ){
-	printf("wtfupdate()\n");
-	if(dirExists(projectname)==0){
-		printf("Error: Project does not exist\n"); exitHandler();
+	
+	char* projectPath = getPath(".", projectname);
+	
+	//Errorcheck-project not on client
+	if(dirExists(projectPath)==0){ 
+		printf("Error: Project does not exist locally\n"); exitHandler();
 	}
-	wtfconnect(); //shuts down program if cant connect
-
+	
+	wtfconnect(); //connects, shuts down if can't
+	
+	//send and receive data
 	sendCommandProject(sockfd, "update", projectname);
-
-	struct node* dataList = recieveData(sockfd);
+	struct node* dataList = receiveData(sockfd);
+	
+	//Errorcheck- project not on server
 	if( strcmp(dataList->next->name, "Error")==0 ){
-		printf("Error: Project does not exist on server\n");
+		printf("Error: %s\n", dataList->next->content);	
 		exitHandler();
 	}
 
-	char* updatePath = getPath(projectname, UPDATE);
-	char* manPath = getPath(projectname, MANIFEST);
+	char* updatePath = getPath(projectPath, UPDATE);
+	char* manPath = getPath(projectPath, MANIFEST);
 
+	//read in server and client's manifiest
 	struct manifestNode* sMan = parseManifest(dataList->FIRSTFILENODE->content);
 	struct manifestNode* cMan = parseManifest(readFileData(manPath));
-
 	int sManVer = sMan->version;
 	int cManVer = cMan->version;
-
+	
+	//creates .updatefile
 	newVersionFile(sMan->version, updatePath);
 
-	struct manifestNode* sPtr = sMan->next;
-	struct manifestNode* cPtr = cMan->next;
 
+	struct manifestNode* sPtr = sMan->next; //server's manifest
+	struct manifestNode* cPtr = cMan->next; //client's manifest
 	int existConflict = 0;
 	int isEmpty = 1;
-
-	//in cMan
-	while( cPtr != NULL ){
+	
+	while( cPtr != NULL ){ //traverses all files in client's manifest
 		char* liveHash =  generateHash(readFileData(cPtr->path));
 		struct manifestNode* sNode = findFile(cPtr->path,sMan);
 		if( sManVer==cManVer &&
@@ -406,7 +463,7 @@ void wtfupdate( char* projectname ){
 	}
 
 	//A - in sMan and not cMan, sMan version != cMan version
-	while( sPtr != NULL ){
+	while( sPtr != NULL ){ //traverses all files in server's manifest
 		struct manifestNode* cNode = findFile(sPtr->path, cMan);
 		if( cNode == NULL && sManVer != cManVer ){
 			printf("A %s\n", sPtr->path);
@@ -415,57 +472,68 @@ void wtfupdate( char* projectname ){
 		}
 		sPtr = sPtr->next;
 	}
-
+	
 	if( existConflict == 1 ){
 		printf("Error: can't update, fix conflicts and try again\n");
 		remove(updatePath);
 	}
 	if( isEmpty == 1 ){
-		printf("Project is up to date\n");
+		printf("Error: Project is already up to date\n");
 		close(createFile(updatePath));
 	}
-
+	
+	printf("Status: update successful\n");
 }
 
-//	after update**-DONE
+
+/**
+	Applies changes in .update file to
+	bring client version of project up to date with servers
+**/
 void wtfupgrade( char* projectname ){
-	printf("wtfupgrade()\n");
-	if(dirExists(projectname)==0){
+	
+	char* projectPath = getPath(".", projectname);
+	
+	//Errorcheck-project not on client
+	if(dirExists(projectPath)==0){
 		printf("Error: Project does not exist\n"); exitHandler();
 	}
-
-	char* updatePath = getPath(projectname, UPDATE);
-	char* manPath = getPath(projectname, MANIFEST);
+	
+	//get paths of .update and .manifest
+	char* updatePath = getPath(projectPath, UPDATE);
+	char* manPath = getPath(projectPath, MANIFEST);
+	
+	//Errorcheck- no .update file
 	if( fileExists(updatePath) == 0 ){
 		printf("Error: No update file found. Update before upgrading.\n");
 		exitHandler();
 	}
+	//Errorcheck- empty .update file
 	struct stat updateStat;
-	if(stat(getPath(projectname, UPDATE), &updateStat) > 0 && updateStat.st_size == 0){
+	if(stat(getPath(projectPath, UPDATE), &updateStat) > 0 && updateStat.st_size == 0){
 		printf("Project up to date\n"); exitHandler();
 	}
 
-	wtfconnect(); //shuts down program if cant connect
+	wtfconnect(); //connects, shuts down if can't
 
 	//sends the update list to server
 	sendData(sockfd, versionData("upgrade", projectname, updatePath));
-
-	struct node* dataList = recieveData(sockfd);
+	struct node* dataList = receiveData(sockfd); //receives data from server
+	
+	//Errorcheck-project not on server
 	if( strcmp(dataList->next->name, "Error")==0 ){
-		printf("Error: Project does not exist on server\n");
+		printf("Error: %s\n", dataList->next->content);	
 		exitHandler();
 	}
 
+	//read in client's manifest and update file
 	struct manifestNode* mList = parseManifest(readFileData(manPath));
 	struct manifestNode* uList = parseManifest(readFileData(updatePath));
 
-	printf("client363\n");
-
-	//delete
+	//delete all files labeled as deleted on .update
 	struct manifestNode* uPtr = uList->next;
 	while( uPtr != NULL ){
 		if( strcmp(uPtr->code, "D") == 0 ){
-			printf("deleted: %s\n", uPtr->path);
 			//also remove from mList
 			struct manifestNode * mNode = findFile( uPtr->path, mList );
 			mNode->code = "deleted";
@@ -474,33 +542,26 @@ void wtfupgrade( char* projectname ){
 		uPtr = uPtr->next;
 	}
 
-	printf("client379\n");
-
-	//create/rewrite all the file sent
+	//create/rewrite all files received from server
 	struct node* ptr = dataList->FIRSTFILENODE;
-	printf("client385\n");
-
 	while( ptr != NULL ){
-		//printf("209content %s\n", ptr->content);
-
 		int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
-		if( fd<0 ){ //can't open, have to create dirs then retry
-			printf("Creating: %s\n", ptr->name);
+				
+		if( fd<0 ){ //can't open, file in subdirectories that havent been created
 			char* tempPath = (char*)malloc((strlen(ptr->name)+1)*sizeof(char));
 			strcpy(tempPath, ptr->name);
-			createSubdir(tempPath);
-			fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
-			if( fd<0){
+			createSubdir(tempPath); //create subdirectories
+			fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 ); //retry opening file
+			if( fd<0){ //should not happen
 				printf("Error creating: %s\n", ptr->name);
 				return;
-			}else{
-				printf("Created: %s\n", ptr->name);
 			}
 		}
-
+		
+		//update manifest
 		struct manifestNode* uNode = findFile(ptr->name, uList);
 		struct manifestNode* mNode = findFile(ptr->name, mList);
-		if( mNode == NULL ){
+		if( mNode == NULL ){ //if new file to be created
 			struct manifestNode* addThis = (struct manifestNode*)malloc(1*sizeof(struct manifestNode));
 			addThis->code = "uptodate";
 			addThis->version = uNode->version;
@@ -508,67 +569,81 @@ void wtfupgrade( char* projectname ){
 			addThis->hash = uNode->hash;
 			addThis->next = mList->next;
 			mList->next = addThis;
-		}else{
+		}else{ //if existing file to be updates
 			mNode->code = "uptodate";
 			mNode->version = uNode->version;
 			mNode->hash = uNode->hash;
 		}
-
-		if( ptr->content != NULL ){
+		
+		if( ptr->content != NULL ){ //write file contents if not empty
 			write(fd, ptr->content, strlen(ptr->content));
 		}
 		close(fd);
 		ptr=ptr->next;
 	}
-
+	
+	//write out updates manifest
 	newVersionFile( uList->version, manPath);
 	mList = mList->next;
 	while( mList != NULL ){
 		if( strcmp(mList->code, "deleted") != 0 ){
 			writeToVersionFile(manPath, mList->code, mList->version, mList->path, mList->hash);
-
 		}
 		mList = mList->next;
 	}
-	remove(getPath(projectname, UPDATE));
+	
+	printf("Status: upgrade successful\n");
+	remove(getPath(projectPath, UPDATE)); //removes .update
 }
 
-//	3.1** -DONE
+/**
+	Compares client and server's manifest
+	documents file changes that the client is ahead on
+**/
 void wtfcommit( char* projectname ){
-	printf("wtfcommit()\n");
-	if( dirExists(projectname) == 0 ){
+	
+	char* projectPath = getPath(".", projectname);
+	
+	//Error check - project not on client
+	if( dirExists(projectPath) == 0 ){
 		printf("Error: Project does not exist\n"); exitHandler();
 	}
-	wtfconnect();
+	
+	wtfconnect(); //Connects to server, shut down if can't
 
-	//check .update
+	//Error check - .update not empty
 	struct stat updateStat;
-	if(stat(getPath(projectname, UPDATE), &updateStat) > 0 && updateStat.st_size>1){
+	if(stat(getPath(projectPath, UPDATE), &updateStat) > 0 && updateStat.st_size>1){
 		printf("Error: Must update before commiting\n"); exitHandler();
 	}
 
+	//Sends and receives data from server
 	sendCommandProject(sockfd, "commit", projectname);
-
-	struct node* dataList = recieveData(sockfd);
-	printf("commit: manifest recieved\n");
+	struct node* dataList = receiveData(sockfd);
+	
+	//Error check - Project not on server or no matching commit	
 	if( strcmp(dataList->next->name, "Error")==0 ){
-		printf("Error: Project does not exist on server\n");
+		printf("Error: %s\n", dataList->next->content);	
 		exitHandler();
 	}
 
+	//Read in server's and client's manifest
 	struct manifestNode* sMan = parseManifest(dataList->FIRSTFILENODE->content);
 	struct manifestNode* cMan
-				= parseManifest(readFileData(getPath(projectname, MANIFEST)));
+				= parseManifest(readFileData(getPath(projectPath, MANIFEST)));
 
-	//check if manifest versions match
+	//Error check- client project not up to date, must upgrade first
 	if( cMan->version != sMan->version ){
-		printf("Error: local repo not up to date, update before commiting\n");
+		printf("Error: local repo not up to date, upgrade before commiting\n");
 		exitHandler();
 	}
-
-	char* commitPath = getPath(projectname, COMMIT);
+	
+	//creates .commit file
+	char* commitPath = getPath(projectPath, COMMIT);
 	newVersionFile(1, commitPath);
 
+	//traverses all files in client's manifest
+	//writes to commit all files that the client is ahead on
 	struct manifestNode* ptr=cMan->next;
 	while( ptr != NULL ){
 		char* newHash = generateHash(readFileData(ptr->path));
@@ -579,7 +654,9 @@ void wtfcommit( char* projectname ){
 		}
 		ptr=ptr->next;
 	}
-
+	
+	//traverses all files in servers manifest
+	//if in server but not client's manifest- writes to .commit that the file is to be deleted
 	ptr=sMan->next;
 	while( ptr!=NULL ){
 		struct manifestNode* cNode = findFile(ptr->path, cMan);
@@ -595,67 +672,73 @@ void wtfcommit( char* projectname ){
 	}
 	//send commit to server
 	sendData(sockfd, versionData("commit", projectname, commitPath));
-	printf("commit sucessfully saved\n");
+	printf("commit successfully saved\n");
 }
 
-//	3.2** -DONE
+/**
+	Applies all changes in .commit to server's version of project
+**/
 void wtfpush( char* projectname ){
-	printf("wtfcommit()\n");
-	if( dirExists(projectname) == 0 ){
+	
+	char* projectPath = getPath(".", projectname);
+	
+	//Errorcheck- project not on client
+	if( dirExists(projectPath) == 0 ){
 		printf("Error: Project does not exist\n"); exitHandler();
 	}
-	char* commitPath = getPath(projectname, COMMIT);
+	//Error check -.commit file does not exist, must commit first
+	char* commitPath = getPath(projectPath, COMMIT);
 	int commitFD = open( commitPath, O_RDONLY );
 	if(commitFD < 0 ){
-		printf("Error: no commits to be pushed");
+		printf("Error: No commits exist, commit before pushing\n");
 		exitHandler();
 	}
 	close(commitFD);
+	//Error check - .update file exists and there are M codes
 	struct stat updateStat;
-	if(stat(getPath(projectname, UPDATE), &updateStat) > 0 && updateStat.st_size>1){
-		//if there are any M codes
-		printf("Error: Must upgrade before pushing\n"); exitHandler();
+	if(stat(getPath(projectPath, UPDATE), &updateStat) > 0 && updateStat.st_size>1){
+		struct manifestNode* uList = parseManifest(readFileData(getPath(projectPath, UPDATE)));
+		uList = uList->next;
+		while( uList != NULL ){
+			if(strcmp(uList->code, "M")==0){
+				printf("Error: Modified files exist. Upgrade before pushing"); exitHandler();
+			}
+		}
 	}
 
-	wtfconnect();
+	wtfconnect(); //connects to server, shuts down if can't
 
+	//makes data to be send to server
 	struct manifestNode* cList = parseManifest(readFileData(commitPath));
 	cList = cList->next;
-
 	char* data = NULL; int count = 1;
-	data = appendFileData(data, commitPath);
-	while( cList != NULL ){
-		printf("605: %s\n", cList->path);
+	data = appendFileData(data, commitPath); //adds .commit to data
+	while( cList != NULL ){ //adds all files to be updates to data
 		data = appendFileData(data, cList->path);
-		printf("607: %s\n", data);
 		cList = cList->next;
 		count++;
 	}
-	printf("611\n");
-
 	data = appendData(dataHeader("push", "ProjectFileContent", projectname, count), data);
-
-	//send .commit to server
-	sendData(sockfd, data);
-	printf("617\n");
-
-	struct node* dataList = recieveData(sockfd);
+	sendData(sockfd, data); //send the data to server
+	struct node* dataList = receiveData(sockfd); //receives data from server
+	
+	//Error check- error signal received bc project not on server
 	if( strcmp(dataList->next->name, "Error")==0 ){
-		printf("Error: Project does not exist on server\n");
+		printf("Error: %s\n", dataList->next->content);	
 		exitHandler();
 	}
 
-	//update manifest
-	int manFD = open(getPath(projectname, MANIFEST), O_WRONLY|O_TRUNC|O_CREAT, 0666);
-	if( manFD < 0 ){
-		printf("449: Error updating manifest\n");
+	//update client's manifest
+	int manFD = open(getPath(projectPath, MANIFEST), O_WRONLY|O_TRUNC|O_CREAT, 0666);
+	if( manFD < 0 ){ //should never happen
+		printf("Status: Error updating manifest\n"); exitHandler();
 	}
 	write(manFD, dataList->FIRSTFILENODE->content, strlen(dataList->FIRSTFILENODE->content));
 	close(manFD);
 
 	remove(commitPath);
 
-	printf("push sucessful\n");
+	printf("Status: push successful\n");
 }
 
 //	4.1

@@ -1,25 +1,24 @@
 #include "WTFheader.h"
 
 
-
 int sendData( int fd, char* data ){
 	int size = strlen(data);
 	write(fd, &size, sizeof(int)); //send size of data
-	int code = recieveConfirmation(fd); //get confirmation
+	int code = receiveConfirmation(fd); //get confirmation
 	if(code != 0 ){
 		write(fd, data, size); //send data
-		recieveConfirmation(fd); //get confirmation
+		receiveConfirmation(fd); //get confirmation
 	}
 	return code; //0 if error
 }
 
-struct node* recieveData( int fd ){
-	//recieve data size
+struct node* receiveData( int fd ){
+	//receive data size
 	int dataSize;
 	read(fd, &dataSize, sizeof(int));
 	sendConfirmation(fd, 1);
 	
-	//recieve data
+	//receive data
 	char data[dataSize+1];
 	read(fd, &data, dataSize);
 	data[dataSize]='\0';
@@ -33,21 +32,18 @@ void sendConfirmation(int fd, int code){ //1-success, 0-failure
 	write(fd, &sendcode, sizeof(int));
 }
 
-int recieveConfirmation( int fd ){
+int receiveConfirmation( int fd ){
 	int code;
 	read(fd, &code, sizeof(int));
 	return code;
 }
 
 struct node* splitData(char* data){
-	//printf("splitData()\n");
 	
 	struct node* dataList = NULL;
 	struct node* endPtr = NULL;
 	
 	int i = 0;
-	
-	//printf("splitdata: %s\n", data);
 	
 	//READ IN COMMAND NODE
 	char * token = NULL;
@@ -76,7 +72,23 @@ struct node* splitData(char* data){
 	strcpy(addThis->name, token);
 	endPtr->next=addThis; endPtr = addThis;
 	char* type = token;
+	
+	//IF Datatype is ERROR/SUCCESS SIGNAL
 	if(strcmp(token, "Error")==0 || strcmp(token, "Success")==0){
+		token = NULL;
+		while(data[i]!='\t'){
+			token = appendChar(token, data[i]);
+			i++;
+		}
+		i++; //skips delim
+		int bytes = atoi(token);
+		token = NULL;
+		for( int k = 0; k < bytes; k++ ){
+			token = appendChar(token, data[i]);
+			i++;
+		}
+		addThis->content = (char*)malloc((strlen(token)+1)*sizeof(char));
+		strcpy(addThis->content, token);
 		return dataList;
 	}
 	

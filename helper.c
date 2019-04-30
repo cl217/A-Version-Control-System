@@ -1,5 +1,14 @@
 #include "WTFheader.h"
 
+
+//To send Error or success msg
+char* makeMsg(char* command, char* signal, char* msg){
+	char* str = appendData(command, signal);
+	str = appendData(str, int2str(strlen(msg)));
+	str = appendData(str, msg);
+	return str;
+}
+
 //recursive mkdir
 void createSubdir(char* path){
 	if( strstr(path, "/") != NULL ){
@@ -165,7 +174,7 @@ char* getPath( char* current, char* entry ){
 }
 
 int createDir(char* dirPath){
-	printf("dirPath: %s\n", dirPath);
+	//printf("dirPath: %s\n", dirPath);
 	DIR* dir = opendir(dirPath);
 	if( dir != NULL ){
 		return 0; //dir already exists
@@ -180,7 +189,7 @@ int createDir(char* dirPath){
 
 //make sure to close file
 int createFile(char* filePath){
-	printf("filePath: %s\n", filePath);
+	//printf("filePath: %s\n", filePath);
 	int fileFD = open(filePath, O_CREAT|O_WRONLY|O_TRUNC, 0666);
 	if( fileFD < 0 ){
 		printf("error creating file\n"); return 0;

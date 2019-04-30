@@ -1,7 +1,7 @@
 #include "WTFheader.h"
 
 /*
-	TODO: MUTEX
+	TODO: MUTEX LOCK
 */
 
 int sockfd;
@@ -61,7 +61,7 @@ int main( int argc, char** argv ){
 			close(sockfd);
 			while(1){
 
-				struct node* dataList = recieveData(newsockfd);
+				struct node* dataList = receiveData(newsockfd);
 
 				executeCommand(dataList);
 			}
@@ -81,8 +81,7 @@ void executeCommand(struct node* dataList){
 	}else if(strcmp(command, "upgrade")==0){
 		serverUpgrade(dataList);
 	}else if(strcmp(command, "commit")==0){
-		serverSendManifest(dataList);
-		serverCommit(dataList->PROJECTNAME);
+		serverCommit(dataList);
 	}else if(strcmp(command, "push")==0){
 		serverPush(dataList);
 	}else if(strcmp(command, "create")==0){
@@ -102,20 +101,19 @@ void executeCommand(struct node* dataList){
 
 void serverDestroy(char* projectname) {
 	//TODO:Lock repository when called
-
-	char * path = getPath(".",projectname);
+	
+	char* path = getPath(".", projectname);
 
 	struct dirent *file;
 	DIR *direc = opendir(path);
-
-  if (direc == NULL)  {
-      printf("Could not open directory" );
-      return;
-  }
-
-  while ((file = readdir(direc)) != NULL) {
-      printf("%s\n", file->d_name);
-			char * filepath = getPath(projectname,file->d_name);
+	if (direc == NULL){ //Fails - if project not on server
+		sendData(newsockfd, makeMsg("destroy", "Error", "Project not on server"));
+		return;
+	}
+	
+	while ((file = readdir(direc)) != NULL) {
+		printf("%s\n", file->d_name);
+			char * filepath = getPath(path,file->d_name);
 			printf("%s\n",filepath);
 			if ( remove(filepath)==0) {
 				printf("file removed\n");
@@ -123,53 +121,54 @@ void serverDestroy(char* projectname) {
 				printf("remove failed\n");
 			}
 	}
-  closedir(direc);
+	closedir(direc);
+	
+	sendData(newsockfd, appendData("destroy", "Success"));
 }
 
 void serverCheckout(char* projectname) {
-
-	int exists = dirExists(projectname);
-	if( exists == 0 ){
-		char* data = appendData("checkout", "Error");
-		sendData(newsockfd, data);
+	char* projectPath = getPath(".", projectname);
+	
+	//Fails if project not on server
+	if( dirExists(projectPath) == 0 ){
+		sendData(newsockfd, makeMsg("checkout", "Error", "Project not on server"));
 		return;
-
 	}
 
 	//Read in server's manifest data
-	char * manPath = getPath(projectname,MANIFEST);
+	char * manPath = getPath(projectPath,MANIFEST);
 	char * manData = readFileData(manPath);
 	struct manifestNode * manList = parseManifest(manData);
-	//printf("manData: %s\n",manData);
 
+
+	//make data to send to client
 	struct manifestNode* ptr = manList->next;
 	char * fileList = "";
 	char * contentList = "";
-	//printf("%s\n",ptr->hash);
-
-	//make data to send to client
 	char* data = NULL;
 	int count = 1;
-	data = appendFileData(data, manPath);
+	data = appendFileData(data, manPath); //adds manifest to data
 	while( ptr != NULL ){
-		printf("448: %s\n", ptr->path);
-		data = appendFileData(data, ptr->path);
+		data = appendFileData(data, ptr->path); //adds files to data
 		ptr = ptr->next;
 		count++;
 	}
-
 	data = appendData(dataHeader("checkout", "ProjectFileContent", projectname, count), data);
-	sendData(newsockfd, data);
-	printf("checkout file sent\n");
-
-  printf("\ndata: %s\n", data);
+	
+	sendData(newsockfd, data); //Sends data to client
 }
 
-void serverCommit(char* projectname){
-	struct node* dataList = recieveData(newsockfd); //gets the new commit data
-	//count num of active commits in .commit folder
+void serverCommit(struct node* dataList){
+	char* projectPath = getPath(".", dataList->PROJECTNAME);
 
-	char* commitFolderPath = getPath(projectname, COMMIT);
+	//sends manifest, fails if project or manifest not found
+	if(serverSendManifest(dataList)==0){ 
+		return; 
+	}
+	
+	dataList = receiveData(newsockfd); //gets the new commit data
+	//count num of active commits in .commit folder
+	char* commitFolderPath = getPath(projectPath, COMMIT);
 	int countFiles = 1;
 	DIR* dir = opendir(commitFolderPath);
 	struct dirent* entry;
@@ -179,23 +178,30 @@ void serverCommit(char* projectname){
 		}
 	}
 	closedir(dir);
-
+	
+	//create a new commit in .commit folder
 	int commitFD = createFile(getPath(commitFolderPath, int2str(countFiles)));
 	char* writeout = dataList->FIRSTFILENODE->content;
 	write(commitFD, writeout, strlen(writeout));
 	close(commitFD);
+	
+	//sends success signal to client
+	sendData(newsockfd,makeMsg("checkout", "Success", "success")); 
 }
 
 void serverPush(struct node* dataList){
-	int exists = dirExists(dataList->PROJECTNAME);
-	if( exists == 0 ){
-		char* data = appendData("push", "Error");
-		sendData(newsockfd, data);
+
+	char* projectPath = getPath(".", dataList->PROJECTNAME);
+	
+	//Fails if project not on server
+	if( dirExists(projectPath) == 0 ){
+		sendData(newsockfd, makeMsg("push", "Error", "Project not on server"));
 		return;
 	}
-
-	char* commitFPath = getPath(dataList->PROJECTNAME, COMMIT);
-
+	
+	char* commitFPath = getPath(projectPath, COMMIT);
+	
+	//tries to find matching commit
 	int commitFound = 0;
 	DIR* dir = opendir(commitFPath);
 	struct dirent* entry;
@@ -208,34 +214,10 @@ void serverPush(struct node* dataList){
 		}
 	}
 	closedir(dir);
-	if( commitFound == 0 ){
-		printf("Error: Please commit before pushing\n");
+	if( commitFound == 0 ){ //if matching commit not found
+		sendData(newsockfd, makeMsg("push", "Error", "Commit before pushing"));
 		return;
 	}
-	printf("server215: commit found\n");
-
-	char* archivePath = getPath(dataList->PROJECTNAME, ARCHIVE);
-	dir = opendir(archivePath);
-	int countFiles = -1;
-	while((entry=readdir(dir)) != NULL ){
-		countFiles++;
-	}
-	closedir(dir);
-
-	//duplicate of project, .project - TODO: do this in a less lazy way
-	char* cpyPath = append(".", dataList->PROJECTNAME);
-	char* syscommand = append("cp -r ", dataList->PROJECTNAME);
-	syscommand = append(syscommand, " ");
-	syscommand = append(syscommand, cpyPath);
-	system(syscommand);
-
-	//move to archive - TODO: do this in a less lazy way
-	syscommand = append("mv ", cpyPath);
-	syscommand = append(syscommand, " ");
-	cpyPath = getPath(archivePath, int2str(countFiles));
-	syscommand = append(syscommand, cpyPath);
-	system(syscommand);
-
 	//remove all commits
 	dir = opendir(commitFPath);
 	while((entry=readdir(dir)) != NULL ){
@@ -245,9 +227,23 @@ void serverPush(struct node* dataList){
 	}
 	closedir(dir);
 
-	char* manPath = getPath(dataList->PROJECTNAME, MANIFEST);
+	//read in manifest
+	char* manPath = getPath(projectPath, MANIFEST);
 	struct manifestNode* mList = parseManifest(readFileData(manPath));
-
+	int versionNum = mList->version;
+	
+	//copy project to temporary ./.projectname on server
+	char* tempPath = getPath(".", append(".", dataList->PROJECTNAME));
+	createDir(tempPath);
+	copydir(projectPath, tempPath);
+	
+	
+	//copy tempCpy to .version in project dir
+	char* copyPath = getPath(projectPath, getPath(ARCHIVE, int2str(versionNum)));
+	createDir(copyPath);
+	copydir(tempPath, copyPath);
+	//TODO: RECURSIVE REMOVE
+	
 	//remove all deleted commits from list of commits
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
 	struct manifestNode* cPtr = cList->next;
@@ -271,15 +267,12 @@ void serverPush(struct node* dataList){
 			strcpy(tempPath, ptr->name);
 			createSubdir(tempPath);
 			fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
-			if( fd<0){
-				printf("Error creating: %s\n", ptr->name);
+			if( fd<0){ //should never happen
+				sendData(newsockfd,makeMsg("push", "Error", "Push failed"));
 				return;
-			}else{
-				printf("Created: %s\n", ptr->name);
 			}
 		}
 		
-
 		struct manifestNode* cNode = findFile(ptr->name, cList);
 		struct manifestNode* mNode = findFile(ptr->name, mList);
 		if( mNode == NULL ){
@@ -313,60 +306,74 @@ void serverPush(struct node* dataList){
 			mList = mList->next;
 		}
 	}
-
+	
 	sendData(newsockfd, versionData("push", dataList->PROJECTNAME, manPath));
+	
 }
 
 //sends the manifest for project to client
-void serverSendManifest(struct node* dataList){
+//checks if project exists
+//checks if file exists
+int serverSendManifest(struct node* dataList){
 	char* projectname = dataList->PROJECTNAME;
-	if( dirExists(projectname) == 0 ){
-		char* data = appendData(dataList->name, "Error");
-		sendData(newsockfd, data);
+	char* projectPath = getPath(".", projectname);
+	
+	//Checks if project exists
+	if( dirExists(projectPath) == 0 ){
+		sendData(newsockfd, makeMsg(dataList->name, "Error", "Project not on server"));
+		return 0; //unsuccessful
 	}
-	sendData(newsockfd,
-	versionData(dataList->name,projectname,getPath(projectname,MANIFEST)));
-
+	
+	//Checks if manifest exists
+	char* manPath = getPath(projectPath, MANIFEST);
+	if( fileExists(manPath) == 0 ){
+		sendData(newsockfd, makeMsg(dataList->name, "Error", "Manifest not found on server"));
+		return 0;
+	}
+	
+	//sends manifest
+	char* data = versionData(dataList->name,projectname, manPath);
+	sendData(newsockfd, data);
+	return 1;
 }
 
 
 //Create project and manifests, sends manifest to client
 void serverCreate(struct node* dataList){
 	char* projectname = dataList->PROJECTNAME;
-	int exists = dirExists(projectname);
-	if( exists == 1 ){
-		char* data = appendData("create", "Error");
-		sendData(newsockfd, data);
+	char* projectpath = getPath(".", projectname);
+	
+	//fails if project already exists
+	if( dirExists(projectpath)== 1 ){
+		sendData(newsockfd, makeMsg("create", "Error", "Project already exists on server"));
 		return;
 	}
-	char* projectpath =  getPath(".", projectname);
+	
+	//initializes project on server
 	createDir(projectpath);
 	createDir(getPath(projectpath, ARCHIVE));
 	createDir(getPath(projectpath, COMMIT));
 	char* manifestPath = getPath(projectpath, MANIFEST);
 	newVersionFile(1, manifestPath);
 
-	//writeToVersionFile(manifestPath, "uptodate", 1, manifestPath, generateHash(""));
-
+	//Sends initialized manifest to client
 	sendData(newsockfd, versionData("create",projectname, manifestPath));
 }
 
 
-
-
 void serverUpgrade(struct node* dataList){
-	int exists = dirExists(dataList->PROJECTNAME);
-	if( exists == 0 ){
-		char* data = appendData("upgrade", "Error");
-		sendData(newsockfd, data);
+	//fails if project doesnt exist
+	if( dirExists(getPath(".", dataList->PROJECTNAME)) == 0 ){
+		sendData(newsockfd, makeMsg("upgrade", "Error", "Project not on server"));
 		return;
 	}
-
+	
+	//read in .update sent from server
 	struct manifestNode* uList = parseManifest(dataList->FIRSTFILENODE->content);
-	printf("server301\n");
-
 	char* data = NULL; int count = 0;
 	uList = uList->next;
+	
+	//makes data to be sent of all files to be added/updated
 	while( uList != NULL ){
 		printf("path: %s\n", uList->path);
 		if( uList->code != "D" ){
@@ -375,7 +382,7 @@ void serverUpgrade(struct node* dataList){
 		}
 		uList = uList->next;
 	}
-	printf("filecount: %d\n", count);
+	//Sends the data to client
 	data = appendData(dataHeader("upgrade", "ProjectFileContent", dataList->PROJECTNAME, count), data);
 	sendData(newsockfd, data);
 }

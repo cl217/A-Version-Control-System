@@ -1,12 +1,38 @@
 #include "WTFheader.h"
 
 
+void copydir(char* srcPath, char*destPath){
+	DIR * dir = opendir(srcPath);
+	struct dirent * entry;
+	if(dir == NULL){
+		return;
+	}
+	while( (entry=readdir(dir)) != NULL ){ //loop everything in directory
+		char* entrypath = getPath(srcPath, entry->d_name);
+		char* cpypath = getPath(destPath, entry->d_name);
+		if( entry->d_type==DT_DIR 
+				&& strcmp(".", entry->d_name)!=0 && strcmp("..", entry->d_name)!=0 ){
+			//is directory
+			//printf("copying dir: %s\n", cpypath);
+			createDir(cpypath);
+			copydir(entrypath, cpypath); //go in subdirectory-recursive traversal
+		}else if(entry->d_type == DT_REG){ //is file
+			//printf("copying file: %s\n", cpypath);
+			int fd = createFile(cpypath);
+			char* data = readFileData(entrypath);
+			if(data != NULL){
+				write(fd, data, strlen(data));
+			}
+			close(fd);
+		}
+	}
+}
 
 //read file data
 char* readFileData(char* filePath){
 	int fileFD = open(filePath, O_RDONLY);
 	if(fileFD < 0 ){
-		printf("Error: file does not exist\n"); return NULL;
+		printf("Error: %s does not exist\n"); return NULL;
 	}
 	char c[1];
 	char* data = NULL; 

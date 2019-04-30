@@ -65,17 +65,19 @@ int fileExists(char*);
 int compareVersion( char*, char*, struct manifestNode* );
 int neg(int);
 struct manifestNode* findFile(char*, struct manifestNode*);
+char* makeMsg(char*, char*, char*);
 
 /** communicate.c **/
 int sendData(int, char*);
-struct node* recieveData(int);
+struct node* receiveData(int);
 void sendConfirmation(int, int);
-int recieveConfirmation(int);
+int receiveConfirmation(int);
 struct node* splitData(char*);
 void sendCommandProject( int, char*, char*);
 
 
 /** readwrite.c **/
+void copydir(char*, char*);
 char* generateHash(char*);
 char* writeToVersionFile(char*,char*, int, char*, char*);
 struct manifestNode* parseManifest(char*); //can be used with commit too
@@ -89,8 +91,8 @@ char* dataHeader( char* command, char* type, char* projectname, int numFile );
 /** wtfserver.c **/
 void executeCommand(struct node*);
 void serverCreate(struct node*);
-void serverSendManifest(struct node*);
-void serverCommit(char*);
+int serverSendManifest(struct node*);
+void serverCommit(struct node*);
 void serverPush(struct node*);
 void serverUpgrade(struct node*);
 void serverCheckout(char*);
