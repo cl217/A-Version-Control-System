@@ -114,13 +114,15 @@ void serverDestroy(char* projectname) {
   }
 
   while ((file = readdir(direc)) != NULL) {
-      printf("%s\n", file->d_name);
 			char * filepath = getPath(projectname,file->d_name);
+			if (dirExists(filepath)) {
+				if ((strcmp(file->d_name,".") != 0) && (strcmp(file->d_name, "..") != 0)) {
+					serverDestroy(filepath);
+				}
+			}
 			printf("%s\n",filepath);
 			if ( remove(filepath)==0) {
 				printf("file removed\n");
-			} else {
-				printf("remove failed\n");
 			}
 	}
   closedir(direc);
@@ -278,7 +280,7 @@ void serverPush(struct node* dataList){
 				printf("Created: %s\n", ptr->name);
 			}
 		}
-		
+
 
 		struct manifestNode* cNode = findFile(ptr->name, cList);
 		struct manifestNode* mNode = findFile(ptr->name, mList);
