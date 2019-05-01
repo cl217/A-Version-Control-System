@@ -3,7 +3,7 @@ test: clean WTF TEST
 
 WTF: WTFserver.o WTFclient.o helper.o communicate.o readwrite.o
 	gcc -g -std=c99 -lm -lssl -lcrypto WTFclient.o helper.o communicate.o readwrite.o -o WTF
-	gcc -g -std=c99 -lm -lssl -lcrypto WTFserver.o helper.o communicate.o readwrite.o -o WTFserver
+	gcc -g -std=c99 -lm -lssl -pthread -lcrypto WTFserver.o helper.o communicate.o readwrite.o -o WTFserver
 	
 TEST: WTFtest.o helper.o readwrite.o
 	mkdir server
@@ -19,7 +19,7 @@ TEST: WTFtest.o helper.o readwrite.o
 	gcc -g -std=c99 -lm -lssl -lcrypto WTFtest.o helper.o readwrite.o -o WTFtest
 		
 WTFserver.o: WTFserver.c WTFheader.h
-	gcc -g -std=c99 -c WTFserver.c
+	gcc -g -std=c99 -pthread -c WTFserver.c
 
 WTFclient.o: WTFclient.c WTFheader.h
 	gcc -g -std=c99 -c WTFclient.c	

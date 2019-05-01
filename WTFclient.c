@@ -46,7 +46,16 @@ int main( int argc, char** argv ){
 	if( argc < 2 ){
 		printf("invalid args\n"); return 0;
 	}
-
+	
+	if(strcmp(argv[1], "test")==0){
+		wtfconnect();
+		while(1){
+			sleep(5);
+			printf("connected\n");
+		}
+	}
+	
+	
 	//  ./WTF randomargv2 for client-server connection test
 	if(strcmp(argv[1], "configure")==0){ // ./WTF configure <IP> <port>
 		if(argc != 4){

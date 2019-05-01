@@ -1,10 +1,11 @@
 #include "WTFheader.h"
 
-#define PORT "23892"
+#define PORT "2000"
 #define IP "127.0.0.1"
 
 int main( int argc, char** argv ){
 	int complete;
+	
 	
 	//server: ./WTFserver <PORT>
 	pid_t serverProc = fork();
@@ -13,6 +14,7 @@ int main( int argc, char** argv ){
 		char* arr[] = {"./WTFserver", PORT, NULL};
 		execv("./WTFserver", arr);
 	}
+	
 	
 	//client1: ./WTF configure <IP> <PORT>
 	pid_t clientProc=fork();
@@ -34,6 +36,7 @@ int main( int argc, char** argv ){
 		waitpid(clientProc, &complete,0);
 	}
 
+	/*
 	//client1: ./WTF create testproj
 	clientProc=fork();
 	if(clientProc==0){
@@ -104,7 +107,7 @@ int main( int argc, char** argv ){
 	}else{
 		waitpid(clientProc, &complete,0);
 	}
-	
+	*/
 	
 	
 	//TODO: 
@@ -125,7 +128,7 @@ int main( int argc, char** argv ){
 	}
 	*/
 	
-	kill(serverProc, SIGINT);
+	//kill(serverProc, SIGINT);
     	return 0;	
 	
 }

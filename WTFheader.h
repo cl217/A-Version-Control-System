@@ -18,6 +18,7 @@
 #include <openssl/sha.h>
 #include <libgen.h>
 #include <sys/wait.h>
+#include <pthread.h>
 
 /*
 #include <arpa/inet.h>
@@ -49,6 +50,7 @@ struct manifestNode{
 	char* hash;
 	struct manifestNode* next;
 };
+
 
 /** helper.c **/
 
@@ -91,15 +93,15 @@ void destroyRecursive(char*);
 
 
 /** wtfserver.c **/
-void executeCommand(struct node*);
-void serverCreate(struct node*);
-int serverSendManifest(struct node*);
-void serverCommit(struct node*);
-void serverPush(struct node*);
-void serverUpgrade(struct node*);
-void serverCheckout(char*);
-void serverDestroy(char * projectname);
-void serverCurrentVersion( char * projectname);
+void executeCommand(struct node*, int);
+void serverCreate(struct node*, int);
+int serverSendManifest(struct node*, int);
+void serverCommit(struct node*, int);
+void serverPush(struct node*, int);
+void serverUpgrade(struct node*, int);
+void serverCheckout(char*, int);
+void serverDestroy(char *, int);
+void serverCurrentVersion( char *, int);
 
 
 

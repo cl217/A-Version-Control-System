@@ -2,18 +2,56 @@
 
 /*
 	TODO: MUTEX LOCK
-	TODO: Client disconnect msg
+	TODO: Client id for connect/disconnect msgs?
 */
 
-int sockfd;
-int newsockfd;
+
+/*
+	pthread_mutex_t mutex; //type
+	int pthread_mutex_lock( pthread_mutex_t *mutex ); //lock function
+	int pthread_mutex_unlock( pthread_mutex_t *mutex ); //unlock function
+	
+*/
+
+
+//each project has a mutex
+struct mutexNode{
+	char* projectname;
+	pthread_mutex_t mutex;
+	struct mutexNode* next;
+};
+
+//each client connection has a thread
+struct threadNode{
+	pthread_t thread;
+	int sockfd;
+	struct threadNode* next;
+};
+
+struct mutexNode* mutexList = NULL;
+struct threadNode* threadList = NULL;
 
 void exitSignalHandler( int sig_num ){
-	close(newsockfd);
-	close(sockfd);
-	printf("Server shut down.\n");
+	while( threadList != NULL ){
+		close(threadList->sockfd);
+		//TODO: should probably identify the client
+		printf("Server: A client has been disconnected\n");
+		threadList = threadList->next;
+	}
+	printf("Server: Server has been shut down.\n");
 	exit(0);
 }
+
+void *threadHandler(void *fd_pointer){
+	int sockfd = *(int*)fd_pointer;
+	struct node* dataList = receiveData(sockfd);
+	executeCommand(dataList, sockfd);
+	
+	//Command has been executed here
+	close(sockfd); //close client connection
+	threadList = threadList->next; //remove finished thread from list
+}
+
 
 int main( int argc, char** argv ){
 
@@ -30,7 +68,7 @@ int main( int argc, char** argv ){
 		//printf("port: %s, %d\n", argv[1], port);
 	}
 
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if(sockfd < 0){
 		printf("Error: Can't open socket\n"); return 1;
 	}
@@ -49,49 +87,57 @@ int main( int argc, char** argv ){
 
 	struct sockaddr_in clientAddress;
 	socklen_t clientLen = sizeof(clientAddress);
-	pid_t childpid;
+	//pid_t childpid;
 
 	//loop listens for connections
+	int connectionfd;
 	while(1){
-		newsockfd = accept(sockfd, (struct sockaddr *) &clientAddress, &clientLen);
-		if(newsockfd<0){
+		connectionfd = accept(sockfd, (struct sockaddr *) &clientAddress, &clientLen);
+		if(connectionfd<0){
 			printf("Error: Client connection failed.\n"); continue;
 		}
 		printf("Server: New client connected.\n");
-		//new thread for connection
-		if((childpid = fork())==0){
-			close(sockfd);
-			while(1){
-				struct node* dataList = receiveData(newsockfd);
-				executeCommand(dataList);
-			}
-		}else{
-			printf("Server: Client disconnected\n");
-		}
+		
+		
+		//new thread for new client
+		int* newsockfdptr;
+		newsockfdptr = malloc(1);
+		*newsockfdptr = connectionfd;
+		
+		struct threadNode* currentThread = 
+					(struct threadNode*)malloc(sizeof(struct threadNode));
+		currentThread->sockfd = connectionfd;
+		currentThread->next = threadList;
+		threadList = currentThread;
+		
+		pthread_create(&(currentThread->thread), NULL, threadHandler, (void*) newsockfdptr);
+		
 	}
 	return 0;
 }
 
-void executeCommand(struct node* dataList){
+void executeCommand(struct node* dataList, int sockfd){
+	
+	struct mutexNode* currentMutex = NULL; //FIND MUTEX FOR THE PROJECT
 
 	char* command = dataList->name;
 
 	if(strcmp(command, "checkout")==0){
-    		serverCheckout(dataList->PROJECTNAME);
+    		serverCheckout(dataList->PROJECTNAME, sockfd);
 	}else if(strcmp(command, "update")==0){
-		serverSendManifest(dataList);
+		serverSendManifest(dataList, sockfd);
 	}else if(strcmp(command, "upgrade")==0){
-		serverUpgrade(dataList);
+		serverUpgrade(dataList, sockfd);
 	}else if(strcmp(command, "commit")==0){
-		serverCommit(dataList);
+		serverCommit(dataList, sockfd);
 	}else if(strcmp(command, "push")==0){
-		serverPush(dataList);
+		serverPush(dataList, sockfd);
 	}else if(strcmp(command, "create")==0){
-		serverCreate(dataList);
+		serverCreate(dataList, sockfd);
 	}else if(strcmp(command, "destroy")==0){
-		serverDestroy(dataList->PROJECTNAME);
+		serverDestroy(dataList->PROJECTNAME, sockfd);
 	}else if(strcmp(command, "currentversion")==0){
-		serverSendManifest(dataList);
+		serverSendManifest(dataList, sockfd);
 	}else if(strcmp(command, "history")==0){
 
 	}else if(strcmp(command, "rollback")==0){
@@ -101,24 +147,24 @@ void executeCommand(struct node* dataList){
 	}
 }
 
-void serverDestroy(char* projectname) {
+void serverDestroy(char* projectname, int sockfd) {
 	//TODO:Lock repository when called
 	char* projectPath = getPath(".", projectname);
 	if( dirExists(projectPath) == 0 ){
-		sendData(newsockfd, makeMsg("destroy", "Error", "Project not on server"));
+		sendData(sockfd, makeMsg("destroy", "Error", "Project not on server"));
 		return;
 	}
 	destroyRecursive(projectPath);
-	sendData(newsockfd, makeMsg("destroy", "success", "Project destroyed"));
+	sendData(sockfd, makeMsg("destroy", "success", "Project destroyed"));
 
 }
 
-void serverCheckout(char* projectname) {
+void serverCheckout(char* projectname, int sockfd) {
 	char* projectPath = getPath(".", projectname);
 
 	//Fails if project not on server
 	if( dirExists(projectPath) == 0 ){
-		sendData(newsockfd, makeMsg("checkout", "Error", "Project not on server"));
+		sendData(sockfd, makeMsg("checkout", "Error", "Project not on server"));
 		return;
 	}
 
@@ -142,18 +188,18 @@ void serverCheckout(char* projectname) {
 	}
 	data = appendData(dataHeader("checkout", "ProjectFileContent", projectname, count), data);
 
-	sendData(newsockfd, data); //Sends data to client
+	sendData(sockfd, data); //Sends data to client
 }
 
-void serverCommit(struct node* dataList){
+void serverCommit(struct node* dataList, int sockfd){
 	char* projectPath = getPath(".", dataList->PROJECTNAME);
 
 	//sends manifest, fails if project or manifest not found
-	if(serverSendManifest(dataList)==0){
+	if(serverSendManifest(dataList, sockfd)==0){
 		return;
 	}
 
-	dataList = receiveData(newsockfd); //gets the new commit data
+	dataList = receiveData(sockfd); //gets the new commit data
 	//count num of active commits in .commit folder
 	char* commitFolderPath = getPath(projectPath, COMMIT);
 	int countFiles = 1;
@@ -173,16 +219,16 @@ void serverCommit(struct node* dataList){
 	close(commitFD);
 
 	//sends success signal to client
-	sendData(newsockfd,makeMsg("checkout", "Success", "success"));
+	sendData(sockfd,makeMsg("checkout", "Success", "success"));
 }
 
-void serverPush(struct node* dataList){
+void serverPush(struct node* dataList, int sockfd){
 
 	char* projectPath = getPath(".", dataList->PROJECTNAME);
 
 	//Fails if project not on server
 	if( dirExists(projectPath) == 0 ){
-		sendData(newsockfd, makeMsg("push", "Error", "Project not on server"));
+		sendData(sockfd, makeMsg("push", "Error", "Project not on server"));
 		return;
 	}
 
@@ -202,7 +248,7 @@ void serverPush(struct node* dataList){
 	}
 	closedir(dir);
 	if( commitFound == 0 ){ //if matching commit not found
-		sendData(newsockfd, makeMsg("push", "Error", "Commit before pushing"));
+		sendData(sockfd, makeMsg("push", "Error", "Commit before pushing"));
 		return;
 	}
 	//remove all commits
@@ -275,7 +321,7 @@ void serverPush(struct node* dataList){
 			createSubdir(tempPath);
 			fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 			if( fd<0){ //should never happen
-				sendData(newsockfd,makeMsg("push", "Error", "Push failed"));
+				sendData(sockfd,makeMsg("push", "Error", "Push failed"));
 				return;
 			}
 		}
@@ -298,45 +344,45 @@ void serverPush(struct node* dataList){
 		mList = mList->next;
 	}
 
-	sendData(newsockfd, versionData("push", dataList->PROJECTNAME, manPath));
+	sendData(sockfd, versionData("push", dataList->PROJECTNAME, manPath));
 
 }
 
 //sends the manifest for project to client
 //checks if project exists
 //checks if file exists
-int serverSendManifest(struct node* dataList){
+int serverSendManifest(struct node* dataList, int sockfd){
 	char* projectname = dataList->PROJECTNAME;
 	char* projectPath = getPath(".", projectname);
 
 	//Checks if project exists
 	if( dirExists(projectPath) == 0 ){
-		sendData(newsockfd, makeMsg(dataList->name, "Error", "Project not on server"));
+		sendData(sockfd, makeMsg(dataList->name, "Error", "Project not on server"));
 		return 0; //unsuccessful
 	}
 
 	//Checks if manifest exists
 	char* manPath = getPath(projectPath, MANIFEST);
 	if( fileExists(manPath) == 0 ){
-		sendData(newsockfd, makeMsg(dataList->name, "Error", "Manifest not found on server"));
+		sendData(sockfd, makeMsg(dataList->name, "Error", "Manifest not found on server"));
 		return 0;
 	}
 
 	//sends manifest
 	char* data = versionData(dataList->name,projectname, manPath);
-	sendData(newsockfd, data);
+	sendData(sockfd, data);
 	return 1;
 }
 
 
 //Create project and manifests, sends manifest to client
-void serverCreate(struct node* dataList){
+void serverCreate(struct node* dataList, int sockfd){
 	char* projectname = dataList->PROJECTNAME;
 	char* projectpath = getPath(".", projectname);
 
 	//fails if project already exists
 	if( dirExists(projectpath)== 1 ){
-		sendData(newsockfd, makeMsg("create", "Error", "Project already exists on server"));
+		sendData(sockfd, makeMsg("create", "Error", "Project already exists on server"));
 		return;
 	}
 
@@ -348,14 +394,14 @@ void serverCreate(struct node* dataList){
 	newVersionFile(1, manifestPath);
 
 	//Sends initialized manifest to client
-	sendData(newsockfd, versionData("create",projectname, manifestPath));
+	sendData(sockfd, versionData("create",projectname, manifestPath));
 }
 
 
-void serverUpgrade(struct node* dataList){
+void serverUpgrade(struct node* dataList, int sockfd){
 	//fails if project doesnt exist
 	if( dirExists(getPath(".", dataList->PROJECTNAME)) == 0 ){
-		sendData(newsockfd, makeMsg("upgrade", "Error", "Project not on server"));
+		sendData(sockfd, makeMsg("upgrade", "Error", "Project not on server"));
 		return;
 	}
 
@@ -375,5 +421,5 @@ void serverUpgrade(struct node* dataList){
 	}
 	//Sends the data to client
 	data = appendData(dataHeader("upgrade", "ProjectFileContent", dataList->PROJECTNAME, count), data);
-	sendData(newsockfd, data);
+	sendData(sockfd, data);
 }
