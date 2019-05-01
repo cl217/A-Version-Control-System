@@ -16,7 +16,7 @@ void exitSignalHandler( int sig_num ){
 }
 
 int main( int argc, char** argv ){
-	
+
 	signal(SIGINT, exitSignalHandler);
 
 	int port = -1;
@@ -50,7 +50,7 @@ int main( int argc, char** argv ){
 	struct sockaddr_in clientAddress;
 	socklen_t clientLen = sizeof(clientAddress);
 	pid_t childpid;
-	
+
 	//loop listens for connections
 	while(1){
 		newsockfd = accept(sockfd, (struct sockaddr *) &clientAddress, &clientLen);
@@ -91,7 +91,7 @@ void executeCommand(struct node* dataList){
 	}else if(strcmp(command, "destroy")==0){
 		serverDestroy(dataList->PROJECTNAME);
 	}else if(strcmp(command, "currentversion")==0){
-
+		serverSendManifest(dataList);
 	}else if(strcmp(command, "history")==0){
 
 	}else if(strcmp(command, "rollback")==0){
@@ -230,7 +230,7 @@ void serverPush(struct node* dataList){
 	createDir(copyPath);
 	copydir(tempPath, copyPath);
 	destroyRecursive(tempPath);
-	
+
 	//remove all deleted commits from list of commits
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
 	struct manifestNode* cPtr = cList->next;
@@ -247,10 +247,10 @@ void serverPush(struct node* dataList){
 	//create/rewrite all the files sent
 	struct node* ptr = dataList->FIRSTFILENODE->next;
 	while( ptr != NULL ){
-		
+
 		struct manifestNode* cNode = findFile(ptr->name, cList);
 		struct manifestNode* mNode = findFile(ptr->name, mList);
-		
+
 		if( mNode == NULL ){
 			struct manifestNode* addThis = (struct manifestNode*)malloc(1*sizeof(struct manifestNode));
 			addThis->code = "uptodate";
@@ -267,7 +267,7 @@ void serverPush(struct node* dataList){
 			mNode->version = cNode->version;
 			mNode->hash = cNode->hash;
 		}
-		
+
 		int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 		if( fd<0 ){ //can't open, have to create dirs then retry
 			char* tempPath = (char*)malloc((strlen(ptr->name)+1)*sizeof(char));

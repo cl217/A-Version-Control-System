@@ -410,7 +410,7 @@ void wtfremove(char * projectname, char * filename) {
 	newVersionFile(manList->version, manPath);
 
 	//write to new manifest, skip file to be removed
-	
+
 	int found = 0;
 	while (ptr != NULL) {
 		if (strcmp(ptr->path,filePath) != 0 ) {
@@ -420,7 +420,7 @@ void wtfremove(char * projectname, char * filename) {
 		}
 		ptr = ptr->next;
 	}
-	
+
 	if( found == 0 ){
 		printf("Error: file is not on manifest\n");
 	}else{
@@ -779,7 +779,44 @@ void wtfpush( char* projectname ){
 }
 
 //	4.1
-void wtfcurrentversion( char* projectname ){}
+void wtfcurrentversion( char* projectname ){
+	char* projectPath = getPath(".", projectname);
+
+	wtfconnect(); //connects, shuts down if can't
+	char * manPath = getPath(projectPath,MANIFEST);
+
+	//send and receive data
+	sendCommandProject(sockfd, "currentversion", projectname);
+	struct node* data = receiveData(sockfd);
+
+	if( strcmp(data->next->name, "Error")==0 ){
+		printf("Error: %s\n", data->next->content);
+		exitHandler();
+	}
+
+	while (data!=NULL) {
+		if (strcmp(data->name,manPath) == 0) {
+			struct manifestNode * manList = parseManifest(data->content);
+			struct manifestNode * ptr = manList->next;
+			char * versionInfo = "";
+
+			while (ptr!=NULL) {
+				char * file = append("File: ",ptr->path);
+				char * version = append(" Version: ", int2str(ptr->version));
+				char * line = append(file,version);
+				line  = appendChar(line, '\n');
+				versionInfo = append(line,versionInfo);
+				ptr = ptr->next;
+			}
+			//print curr version info
+			printf("Current Version:\n%s\n",versionInfo);
+			break;
+		}
+		data = data->next;
+	}
+
+
+}
 
 //	4.1
 void wtfhistory( char* history ){}
