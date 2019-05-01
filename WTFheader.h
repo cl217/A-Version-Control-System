@@ -99,6 +99,7 @@ void serverPush(struct node*);
 void serverUpgrade(struct node*);
 void serverCheckout(char*);
 void serverDestroy(char * projectname);
+void serverCurrentVersion( char * projectname);
 
 
 
