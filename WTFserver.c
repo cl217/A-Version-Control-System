@@ -34,11 +34,17 @@ struct threadNode* threadList = NULL;
 void exitSignalHandler( int sig_num ){
 	while( threadList != NULL ){
 		close(threadList->sockfd);
-		//TODO: should probably identify the client
-		printf("Server: A client has been disconnected\n");
+		//TODO: should the thread be killed too?
+		
+		if( threadList->next == NULL ){
+			printf("Server: Server has been shut down.\n");
+		}else{
+			//TODO: should probably identify the client
+			printf("Server: A client has been disconnected\n");
+		}	
 		threadList = threadList->next;
 	}
-	printf("Server: Server has been shut down.\n");
+
 	exit(0);
 }
 
@@ -74,6 +80,10 @@ int main( int argc, char** argv ){
 	}
 	printf("Server: running...\n");
 
+	struct threadNode* serverThread = (struct threadNode*) malloc(sizeof(struct threadNode));
+	serverThread->sockfd = sockfd;
+	threadList = serverThread;
+	
 	struct sockaddr_in serverAddress;
 	serverAddress.sin_family = AF_INET;
 	serverAddress.sin_addr.s_addr = INADDR_ANY;
