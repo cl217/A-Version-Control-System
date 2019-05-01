@@ -57,7 +57,7 @@ int main( int argc, char** argv ){
 		if(newsockfd<0){
 			printf("Error: Client connection failed.\n"); continue;
 		}
-		printf("New client connected.\n");
+		printf("Server: New client connected.\n");
 		//new thread for connection
 		if((childpid = fork())==0){
 			close(sockfd);
@@ -65,6 +65,8 @@ int main( int argc, char** argv ){
 				struct node* dataList = receiveData(newsockfd);
 				executeCommand(dataList);
 			}
+		}else{
+			printf("Server: Client disconnected\n");
 		}
 	}
 	return 0;
