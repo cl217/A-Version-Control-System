@@ -247,6 +247,7 @@ void wtfcreate( char* projectname ){
 }
 
 
+
 /*
 	Destroys project folder + all subdirectories and files on server
 	Keeps everything on client
@@ -388,12 +389,38 @@ void wtfadd( char* projectname, char* filename ){
 
 
 
-//	2.2 - remove the file from manifest (tag it as removed?)
-void wtfremove( char* projectname, char* filename ){}
+/*
+	Removes targeted file from the client side manifest
+	TODO: tag it as removed?
+*/
+void wtfremove(char * projectname, char * filename) {
 
+	char* projectPath = getPath(".", projectname);
+	char * manPath = getPath(projectPath, MANIFEST);
+	char * filePath = getPath(projectPath,filename);
+	if(dirExists(projectPath)==0){
+		printf("Error: Project does not exist\n"); exitHandler();
+	}
 
+	char * manData = readFileData(manPath);
+	struct manifestNode * manList = parseManifest(manData);
 
+	struct manifestNode * prev = manList;
+	struct manifestNode * ptr = manList->next;
 
+	//remove manifest and make a new manifest
+	remove(manPath);
+	newVersionFile(manList->version, manPath);
+
+	//write to new manifest, skip file to be removed
+	while (ptr != NULL) {
+		if (strcmp(ptr->path,filePath) != 0) {
+			writeToVersionFile(manPath,ptr->code,ptr->version,ptr->path, ptr->hash);
+		} else {
+		}
+		ptr = ptr->next;
+	}
+}
 
 
 /**

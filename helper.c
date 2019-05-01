@@ -14,7 +14,7 @@ void createSubdir(char* path){
 	if( strstr(path, "/") != NULL ){
 		char* dir = dirname(path);
 		char* parent = (char*)malloc((strlen(dir)+1)*sizeof(char));
-		strcpy(parent, dir);	
+		strcpy(parent, dir);
 		createSubdir(parent);
 	}
 	DIR* dir = opendir(path);
@@ -35,7 +35,7 @@ struct manifestNode* findFile( char* filepath, struct manifestNode* manifestList
 		ptr = ptr->next;
 	}
 	return NULL; //file not in manifest
-	
+
 }
 
 //compares file against last version of file in manifest
@@ -44,11 +44,11 @@ int compareVersion( char* filePath, char* hash, struct manifestNode* list ){
 	while(ptr!=NULL){
 		if( strcmp(filePath, list->path) == 0 ){
 			if( strcmp(hash, list->hash) == 0 ){
-				return 0; //same		
+				return 0; //same
 			}
 			return 1; //different (exists)
 		}
-		ptr=ptr->next;	
+		ptr=ptr->next;
 	}
 	return 2; //different (new file)
 
@@ -79,10 +79,6 @@ int fileExists(char* filePath){
 	return 1; //exists
 }
 
-void* writeToFile(int fd, char* data){
-
-}
-
 
 char* int2str(int num){
 	int isNeg = 0;
@@ -95,7 +91,7 @@ char* int2str(int num){
 	}
 	int digits = floor( log10( num ) ) + 1;
 	char* str;
-	
+
 	if( isNeg == 0 ){
 		str = (char*)malloc((digits+1)*sizeof(char));
 		sprintf(str, "%d", num);
@@ -105,7 +101,7 @@ char* int2str(int num){
 		sprintf(str, "%d", neg(num));
 		str[digits+1]='\0';
 	}
-	
+
 	//printf( "returnnum: %s\n", str);
 	return str;
 }
@@ -202,36 +198,32 @@ void traverse(struct node* list){
 	struct node* ptr = list;
 	while( ptr != NULL ){
 		char* nodeType = ptr->nodeType;
-		
-		printf("type(%s)\n", ptr->nodeType);		
-		
+
+		printf("type(%s)\n", ptr->nodeType);
+
 		if(strcmp(nodeType, "command")==0){
 			printf("\tname(%s)\n", ptr->name);
-			
+
 		}else if(strcmp(nodeType, "dataType")==0){
 			printf("\tname(%s)\n", ptr->name);
-			
+
 		}else if(strcmp(nodeType, "project")==0){
 			printf("\tname(%s)\n", ptr->name);
-			
+
 		}else if(strcmp(nodeType, "numFile")==0){
 			printf("\tname(%s)\n", ptr->name);
-			
+
 		}else if(strcmp(nodeType, "fileName")==0){
 			printf("\tname(%s)\n", ptr->name);
-			
+
 		}else if(strcmp(nodeType, "fileContent")==0){
 			printf("\tname(%s)\n", ptr->name);
 			printf("\tcontent(%s)\n", ptr->content);
 		}else{
 			printf("\tinvalid node type\n");
 		}
-		
+
 		printf("\n");
-		ptr = ptr->next;	
+		ptr = ptr->next;
 	}
 }
-
-
-
-
