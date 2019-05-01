@@ -1,8 +1,33 @@
 #include "WTFheader.h"
 
 
-void destroyRecursive(char* path){
+void destroyRecursive(char* projectname) {
+	//TODO:Lock repository when called
+	char* path = getPath(".", projectname);
 
+	struct dirent *file;
+	DIR *direc = opendir(path);
+	if (direc == NULL){ //Fails - if project not on server
+		//sendData(newsockfd, makeMsg("destroy", "Error", "Project not on server"));
+		return;
+	}
+
+	 while ((file = readdir(direc)) != NULL) {
+	 	char * filepath = getPath(projectname,file->d_name);
+	 	if (dirExists(filepath)) {
+	 		if ((strcmp(file->d_name,".") != 0) && (strcmp(file->d_name, "..") != 0)) {
+	 			destroyRecursive(filepath);
+			}
+		}
+		printf("%s\n",filepath);
+		if ( remove(filepath)==0) {
+			printf("file removed\n");
+		}
+	}
+	closedir(direc);
+
+	remove(path);
+	//sendData(newsockfd, appendData("destroy", "Success"));
 }
 
 void copydir(char* srcPath, char*destPath){
@@ -14,7 +39,7 @@ void copydir(char* srcPath, char*destPath){
 	while( (entry=readdir(dir)) != NULL ){ //loop everything in directory
 		char* entrypath = getPath(srcPath, entry->d_name);
 		char* cpypath = getPath(destPath, entry->d_name);
-		if( entry->d_type==DT_DIR 
+		if( entry->d_type==DT_DIR
 				&& strcmp(".", entry->d_name)!=0 && strcmp("..", entry->d_name)!=0 ){
 			//is directory
 			//printf("copying dir: %s\n", cpypath);
@@ -39,15 +64,15 @@ char* readFileData(char* filePath){
 		printf("Error: %s does not exist\n"); return NULL;
 	}
 	char c[1];
-	char* data = NULL; 
+	char* data = NULL;
 	while( read(fileFD, &c[0], 1) > 0 ){
 		data = appendChar(data, c[0]);
 	}
-	
+
 	if(data==NULL){
 		data = "";
 	}
-	
+
 	//printf("data: %s\n", data);
 	close(fileFD);
 	return data;
@@ -80,11 +105,11 @@ struct manifestNode* parseManifest(char* manifestData){
 		token = appendChar(token, manifestData[i++]);
 	}
 	int manVersion = atoi(token);
-	
+
 	while( i < strlen(manifestData) ){
-		struct manifestNode* addThis = 
+		struct manifestNode* addThis =
 					(struct manifestNode*)malloc(1*sizeof(struct manifestNode));
-		token = NULL;	
+		token = NULL;
 
 		//read in code
 		i++; //skips newline
@@ -94,7 +119,7 @@ struct manifestNode* parseManifest(char* manifestData){
 		addThis->code = (char*)malloc((strlen(token)+1)*sizeof(char));
 		strcpy(addThis->code, token);
 		//printf("code: %s\n", token);
-		
+
 		//read in version
 		token = NULL; i++;
 		while(manifestData[i] != '\t'){
@@ -102,25 +127,25 @@ struct manifestNode* parseManifest(char* manifestData){
 		}
 		addThis->version = atoi(token);
 		//printf("version: %s\n", token);
-		
+
 		//read in path
 		token = NULL; i++;
 		while( manifestData[i] != '\t'){
 			token = appendChar(token, manifestData[i++]);
-		} 
+		}
 		addThis->path = (char*)malloc((strlen(token)+1)*sizeof(char));
 		strcpy(addThis->path, token);
 		//printf("path: %s\n", token);
-				
-		//read hash code		
+
+		//read hash code
 		token = NULL; i++;
 		while( i < strlen(manifestData) && manifestData[i] != '\n' ){
-			token = appendChar(token, manifestData[i++]);		
+			token = appendChar(token, manifestData[i++]);
 		}
 		addThis->hash = (char*)malloc((strlen(token)+1)*sizeof(char));
 		strcpy(addThis->hash, token);
 		//printf("hash: %s\n", token);
-		
+
 		if(manifestList == NULL ){
 			manifestList=addThis;
 		}else{
@@ -132,7 +157,7 @@ struct manifestNode* parseManifest(char* manifestData){
 	addThis->version = manVersion;
 	addThis->next = manifestList;
 	manifestList = addThis;
-	
+
 	return manifestList;
 }
 
@@ -150,13 +175,13 @@ char* writeToVersionFile(char* versionPath, char* code, int curVersion, char*pat
 		printf("error: opening\n"); return NULL;
 	}
 	char* version = int2str(curVersion);
-	
+
 	char* mData = append("\n", code);
 	mData = appendData(mData, version);
 	mData = appendData(mData, path);
 	mData = appendData(mData, hash);
 	write(versionFD, mData, strlen(mData));
-	
+
 	close(versionFD);
 	return mData;
 }
@@ -168,7 +193,7 @@ void newVersionFile(int newVersion, char* filePath){
 		printf("error: creating file\n");return;
 	}
 	char * versionStr = int2str(newVersion);
-	write(fileFD, versionStr, strlen(versionStr)); 
+	write(fileFD, versionStr, strlen(versionStr));
 	close(fileFD);
 }
 
@@ -179,10 +204,10 @@ char* generateHash( char* fileData ){
 	SHA1((unsigned char*)fileData, strlen(fileData), temp);
 	for(int i = 0; i < SHA_DIGEST_LENGTH; i++){
 		sprintf((char*)&buf[i*2], "%02x", temp[i]);
-		
+
 	}
 	buf[SHA_DIGEST_LENGTH*2] = '\0';
-	return buf;	
+	return buf;
 }
 
 void writeToUpdate(int fd, char* code, struct manifestNode* node){
@@ -192,5 +217,3 @@ void writeToUpdate(int fd, char* code, struct manifestNode* node){
 	write(fd, str, strlen(str));
 	write(fd, "\n", 1);
 }
-
-
