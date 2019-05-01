@@ -245,6 +245,27 @@ void serverPush(struct node* dataList){
 	//create/rewrite all the files sent
 	struct node* ptr = dataList->FIRSTFILENODE->next;
 	while( ptr != NULL ){
+		
+		struct manifestNode* cNode = findFile(ptr->name, cList);
+		struct manifestNode* mNode = findFile(ptr->name, mList);
+		
+		if( mNode == NULL ){
+			struct manifestNode* addThis = (struct manifestNode*)malloc(1*sizeof(struct manifestNode));
+			addThis->code = "uptodate";
+			addThis->version = cNode->version;
+			addThis->path = cNode->path;
+			addThis->hash = cNode->hash;
+			addThis->next = mList->next;
+			mList->next = addThis;
+		}else if(strcmp(mNode->code, "deleted")==0){
+			ptr=ptr->next;
+			continue;
+		}else{
+			mNode->code = "uptodate";
+			mNode->version = cNode->version;
+			mNode->hash = cNode->hash;
+		}
+		
 		int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 		if( fd<0 ){ //can't open, have to create dirs then retry
 			char* tempPath = (char*)malloc((strlen(ptr->name)+1)*sizeof(char));
@@ -255,22 +276,6 @@ void serverPush(struct node* dataList){
 				sendData(newsockfd,makeMsg("push", "Error", "Push failed"));
 				return;
 			}
-		}
-
-		struct manifestNode* cNode = findFile(ptr->name, cList);
-		struct manifestNode* mNode = findFile(ptr->name, mList);
-		if( mNode == NULL ){
-			struct manifestNode* addThis = (struct manifestNode*)malloc(1*sizeof(struct manifestNode));
-			addThis->code = "uptodate";
-			addThis->version = cNode->version;
-			addThis->path = cNode->path;
-			addThis->hash = cNode->hash;
-			addThis->next = mList->next;
-			mList->next = addThis;
-		}else{
-			mNode->code = "uptodate";
-			mNode->version = cNode->version;
-			mNode->hash = cNode->hash;
 		}
 
 		if( ptr->content != NULL ){
@@ -287,8 +292,8 @@ void serverPush(struct node* dataList){
 	while( mList != NULL ){
 		if( strcmp(mList->code, "deleted") != 0 ){
 			writeToVersionFile(manPath, mList->code, mList->version, mList->path, mList->hash);
-			mList = mList->next;
 		}
+		mList = mList->next;
 	}
 
 	sendData(newsockfd, versionData("push", dataList->PROJECTNAME, manPath));

@@ -410,12 +410,21 @@ void wtfremove(char * projectname, char * filename) {
 	newVersionFile(manList->version, manPath);
 
 	//write to new manifest, skip file to be removed
+	
+	int found = 0;
 	while (ptr != NULL) {
-		if (strcmp(ptr->path,filePath) != 0) {
+		if (strcmp(ptr->path,filePath) != 0 ) {
 			writeToVersionFile(manPath,ptr->code,ptr->version,ptr->path, ptr->hash);
-		} else {
+		}else{
+			found = 1;
 		}
 		ptr = ptr->next;
+	}
+	
+	if( found == 0 ){
+		printf("Error: file is not on manifest\n");
+	}else{
+		printf("Status: file succesfully removed from manifest\n");
 	}
 }
 

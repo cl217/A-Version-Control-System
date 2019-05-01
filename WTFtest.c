@@ -113,7 +113,7 @@ int main( int argc, char** argv ){
 	// ./WTF versionhistory
 	// ./WTF currentversion
 	
-	
+	/*
 	//client2: ./WTF destroy testproj
 	clientProc=fork();
 	if(clientProc==0){
@@ -123,6 +123,7 @@ int main( int argc, char** argv ){
 	}else{
 		waitpid(clientProc, &complete,0);
 	}
+	*/
 	
 	kill(serverProc, SIGINT);
     	return 0;	
