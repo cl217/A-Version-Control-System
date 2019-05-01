@@ -197,6 +197,6 @@ void sendCommandProject( int sockfd, char* command, char* projectname ){
 	char * data = appendData(command, "Project"); //command, dataType
 	data = appendData(data, int2str(strlen(projectname))); //bytesPname
 	data = appendData(data, projectname); //projectName
-	printf("Sending to server: %s\n", data);
+	//printf("Sending to server: %s\n", data);
 	sendData(sockfd, data);	
 }

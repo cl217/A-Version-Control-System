@@ -175,7 +175,7 @@ int createDir(char* dirPath){
 	if( dir != NULL ){
 		return 0; //dir already exists
 	}
-	int code = mkdir(dirPath, 0700);
+	int code = mkdir(dirPath, 0777);
 	if( code == -1 ){
 		printf("error making dir\n");
 	}

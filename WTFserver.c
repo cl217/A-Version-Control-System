@@ -16,7 +16,7 @@ void exitSignalHandler( int sig_num ){
 }
 
 int main( int argc, char** argv ){
-
+	
 	signal(SIGINT, exitSignalHandler);
 
 	int port = -1;
@@ -27,6 +27,7 @@ int main( int argc, char** argv ){
 		return 1;
 	}else{
 		port = atoi(argv[1]); //string to integer
+		//printf("port: %s, %d\n", argv[1], port);
 	}
 
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -41,7 +42,7 @@ int main( int argc, char** argv ){
 	serverAddress.sin_port = htons(port);
 
 	if( bind(sockfd,(struct sockaddr*) &serverAddress, sizeof(serverAddress)) < 0 ){
-		printf("Error: Can't bind.\n"); return 1;
+		printf("Error: can't bind.\n"); return 1;
 	}
 
 	listen(sockfd, 20);

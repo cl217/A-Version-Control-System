@@ -17,6 +17,7 @@
 #include <dirent.h>
 #include <openssl/sha.h>
 #include <libgen.h>
+#include <sys/wait.h>
 
 /*
 #include <arpa/inet.h>
