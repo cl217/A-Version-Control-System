@@ -2,6 +2,7 @@
 
 /*
 	TODO: MUTEX LOCK
+	TODO: Client disconnect msg
 */
 
 int sockfd;
@@ -10,14 +11,13 @@ int newsockfd;
 void exitSignalHandler( int sig_num ){
 	close(newsockfd);
 	close(sockfd);
-	printf("Server socket closed\n");
+	printf("Server shut down.\n");
 	exit(0);
 }
 
 int main( int argc, char** argv ){
 
 	signal(SIGINT, exitSignalHandler);
-	printf("wtfserver\n");
 
 	int port = -1;
 	//read in argument <port>
@@ -33,7 +33,7 @@ int main( int argc, char** argv ){
 	if(sockfd < 0){
 		printf("Error: Can't open socket\n"); return 1;
 	}
-	printf("server: running...\n");
+	printf("Server: running...\n");
 
 	struct sockaddr_in serverAddress;
 	serverAddress.sin_family = AF_INET;
@@ -44,25 +44,24 @@ int main( int argc, char** argv ){
 		printf("Error: Can't bind.\n"); return 1;
 	}
 
-	listen(sockfd, 10); //TODO: max num?
+	listen(sockfd, 20);
 
 	struct sockaddr_in clientAddress;
 	socklen_t clientLen = sizeof(clientAddress);
-
 	pid_t childpid;
+	
+	//loop listens for connections
 	while(1){
 		newsockfd = accept(sockfd, (struct sockaddr *) &clientAddress, &clientLen);
 		if(newsockfd<0){
-			printf("Error: Accept failed.\n"); return 1;
+			printf("Error: Client connection failed.\n"); continue;
 		}
-		printf("new client accepted...\n\n");
-
+		printf("New client connected.\n");
+		//new thread for connection
 		if((childpid = fork())==0){
 			close(sockfd);
 			while(1){
-
 				struct node* dataList = receiveData(newsockfd);
-
 				executeCommand(dataList);
 			}
 		}
@@ -101,13 +100,12 @@ void executeCommand(struct node* dataList){
 
 void serverDestroy(char* projectname) {
 	//TODO:Lock repository when called
-	char* path = getPath(".", projectname);
-
-	if( dirExists(path) == 0 ){
+	char* projectPath = getPath(".", projectname);
+	if( dirExists(projectPath) == 0 ){
 		sendData(newsockfd, makeMsg("destroy", "Error", "Project not on server"));
 		return;
 	}
-	destroyRecursive(projectname);
+	destroyRecursive(projectPath);
 	sendData(newsockfd, makeMsg("destroy", "success", "Project destroyed"));
 
 }
@@ -228,8 +226,8 @@ void serverPush(struct node* dataList){
 	char* copyPath = getPath(projectPath, getPath(ARCHIVE, int2str(versionNum)));
 	createDir(copyPath);
 	copydir(tempPath, copyPath);
-	//TODO: RECURSIVE REMOVE
-
+	destroyRecursive(tempPath);
+	
 	//remove all deleted commits from list of commits
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
 	struct manifestNode* cPtr = cList->next;
@@ -248,7 +246,6 @@ void serverPush(struct node* dataList){
 	while( ptr != NULL ){
 		int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 		if( fd<0 ){ //can't open, have to create dirs then retry
-			printf("Creating: %s\n", ptr->name);
 			char* tempPath = (char*)malloc((strlen(ptr->name)+1)*sizeof(char));
 			strcpy(tempPath, ptr->name);
 			createSubdir(tempPath);
@@ -361,7 +358,7 @@ void serverUpgrade(struct node* dataList){
 
 	//makes data to be sent of all files to be added/updated
 	while( uList != NULL ){
-		printf("path: %s\n", uList->path);
+		//printf("path: %s\n", uList->path);
 		if( uList->code != "D" ){
 			data = appendFileData(data, uList->path);
 			count++;

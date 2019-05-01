@@ -86,6 +86,7 @@ void newVersionFile(int, char*); //can be used with new commit file too
 void writeToUpdate(int, char*, struct manifestNode*);
 char* versionData( char*, char*, char*);
 char* dataHeader( char* command, char* type, char* projectname, int numFile );
+void destroyRecursive(char*);
 
 
 /** wtfserver.c **/

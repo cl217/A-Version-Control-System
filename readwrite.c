@@ -1,33 +1,25 @@
 #include "WTFheader.h"
 
 
-void destroyRecursive(char* projectname) {
-	//TODO:Lock repository when called
-	char* path = getPath(".", projectname);
-
+void destroyRecursive(char* path) {
 	struct dirent *file;
 	DIR *direc = opendir(path);
-	if (direc == NULL){ //Fails - if project not on server
-		//sendData(newsockfd, makeMsg("destroy", "Error", "Project not on server"));
+	if (direc == NULL){
 		return;
 	}
 
 	 while ((file = readdir(direc)) != NULL) {
-	 	char * filepath = getPath(projectname,file->d_name);
+	 	char * filepath = getPath(path,file->d_name);
 	 	if (dirExists(filepath)) {
 	 		if ((strcmp(file->d_name,".") != 0) && (strcmp(file->d_name, "..") != 0)) {
 	 			destroyRecursive(filepath);
 			}
 		}
-		printf("%s\n",filepath);
-		if ( remove(filepath)==0) {
-			printf("file removed\n");
-		}
+		remove(filepath);
 	}
 	closedir(direc);
 
 	remove(path);
-	//sendData(newsockfd, appendData("destroy", "Success"));
 }
 
 void copydir(char* srcPath, char*destPath){
@@ -42,11 +34,9 @@ void copydir(char* srcPath, char*destPath){
 		if( entry->d_type==DT_DIR
 				&& strcmp(".", entry->d_name)!=0 && strcmp("..", entry->d_name)!=0 ){
 			//is directory
-			//printf("copying dir: %s\n", cpypath);
 			createDir(cpypath);
 			copydir(entrypath, cpypath); //go in subdirectory-recursive traversal
 		}else if(entry->d_type == DT_REG){ //is file
-			//printf("copying file: %s\n", cpypath);
 			int fd = createFile(cpypath);
 			char* data = readFileData(entrypath);
 			if(data != NULL){

@@ -27,14 +27,14 @@ struct filenode* filelist;
 
 void exitSignalHandler( int sig_num ){
 	close(sockfd);
-	printf("Client socket closed\n");
+	printf("Client disconnected from server.\n");
 	exit(1);
 }
 
 void exitHandler(){
 	if( sockfd > 0 ){
 		close(sockfd);
-		printf("Client socket closed\n");
+		printf("Client disconnected from server\n");
 	}
 	exit(1);
 }
@@ -126,6 +126,8 @@ int main( int argc, char** argv ){
 		}else{
 			wtfrollback(argv[2], argv[3]);
 		}
+	}else{
+		printf("Invalid command\n");
 	}
 	if(sockfd > 0 ){
 		exitHandler();
@@ -166,13 +168,13 @@ void wtfconnect(){
 	if(sockfd<0){
 		printf("Error: can't open socket\n"); exitHandler();
 	}
-	printf("Status: new client created\n");
+	//printf("Status: new client created\n");
 
 	//FIND HOST
 	if(server==NULL){
-		printf("Error: host not found\n"); exitHandler();
+		printf("Error: IP not found\n"); exitHandler();
 	}
-	printf("Status: host found\n");
+	//printf("Status: host found\n");
 
 	//Connection setup
 	struct sockaddr_in serverAddr;
@@ -185,11 +187,11 @@ void wtfconnect(){
 	int connected = 0;
 	while( connected == 0 ){
 		if(connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr))>=0){
-			printf("Status: connected to server\n");
+			printf("Status: Connected to server\n");
 			connected = 1;
 		}else{
 			sleep(3);
-			printf("Trying to connect..\n");
+			printf("Status: Attempting to connect to server...\n");
 		}
 	}
 }
@@ -238,7 +240,7 @@ void wtfcreate( char* projectname ){
 	struct node* manNode = dataList->FIRSTFILENODE; //get node of manifest data
 	int manifestFD = open(manNode->name, O_WRONLY|O_CREAT|O_APPEND, 0666);
 	if(manifestFD<0){
-		printf("error: creating manifest\n"); exitHandler();
+		printf("Error: creating manifest\n"); exitHandler();
 	}
 	write(manifestFD, manNode->content, strlen(manNode->content));
 	close(manifestFD);
@@ -261,17 +263,12 @@ void wtfdestroy( char* projectname ){
 
 	//Error check, project not on server
 	struct node* dataList = receiveData(sockfd);
-	if (dataList == NULL) {
-		printf("null list returned\n");
-		return;
-	}
 	if( strcmp(dataList->next->name, "Error")==0 ){
 		printf("Error: %s\n", dataList->next->content);
 		exitHandler();
 	}
 
-	printf("Status: project destroyed on server\n");
-
+	printf("Status:project succesfully destroyed on server\n");
 }
 
 /*
