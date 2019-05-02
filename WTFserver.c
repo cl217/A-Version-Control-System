@@ -14,21 +14,6 @@
 */
 
 
-//each project has a mutex
-struct mutexNode{
-	char* projectname;
-	pthread_mutex_t mutex;
-	struct mutexNode* next;
-};
-
-//each client connection has a thread
-struct threadNode{
-	char* name;
-	pthread_t thread;
-	int sockfd;
-	struct threadNode* next;
-};
-
 struct mutexNode* mutexList = NULL;
 struct threadNode* threadList = NULL;
 
@@ -52,13 +37,21 @@ void exitSignalHandler( int sig_num ){
 void *threadHandler(void *fd_pointer){
 	int sockfd = *(int*)fd_pointer;
 	struct node* dataList = receiveData(sockfd);
+	
+	//testing
+	struct mutexNode* ptr = mutexList;
+	while( ptr != NULL ){
+		printf("mutex: %s\n", ptr->projectname);
+		ptr=ptr->next;	
+	}
+	
 	executeCommand(dataList, sockfd);
 	
 	threadList = threadList->next; //remove finished thread from list
 	
 	//Command has been executed here
 	close(sockfd); //close client connection
-	printf("Server: Client disconnected");
+	printf("Server: Client disconnected\n");
 }
 
 
@@ -100,25 +93,22 @@ int main( int argc, char** argv ){
 	
 	printf("Server: running...\n");
 	
-	/*
-	//TODO: set up mutex for each project directory
+	//Sets up mutex for each project in server
 	DIR* dir = opendir(".");
 	struct dirent* entry;
 	while((entry=readdir(dir)) != NULL ){
 		if(entry->d_type == DT_DIR 
 			&& strcmp(entry->d_name, ".")!=0 && strcmp(entry->d_name, "..")!=0){
 			//Do stuff	
-			struct mutexNode* addThis = (struct mutexNode*) malloc(sizeof(mutexNode));
+			struct mutexNode* addThis
+						 = (struct mutexNode*) malloc(sizeof(struct mutexNode));
 			addThis->projectname = entry->d_name;
+			addThis->mutex = (pthread_mutex_t) PTHREAD_MUTEX_INITIALIZER;
 			addThis->next = mutexList;
 			mutexList = addThis;
-			
-			
-			
 		}
 	}
 	closedir(dir);
-	*/
 	
 
 	listen(sockfd, 20);
@@ -133,7 +123,6 @@ int main( int argc, char** argv ){
 			printf("Error: Client connection failed.\n"); continue;
 		}
 		printf("Server: New client connected.\n");
-		
 		
 		//new thread for new client
 		int* newsockfdptr;
@@ -186,15 +175,36 @@ void executeCommand(struct node* dataList, int sockfd){
 }
 
 void serverDestroy(char* projectname, int sockfd) {
-	//TODO:Lock repository when called
+	
+	pthread_mutex_t mutex = getMutex(projectname, mutexList)->mutex;
+	pthread_mutex_lock(&mutex); //locks project		
+	
 	char* projectPath = getPath(".", projectname);
 	if( dirExists(projectPath) == 0 ){
 		sendData(sockfd, makeMsg("destroy", "Error", "Project not on server"));
+		pthread_mutex_unlock(&mutex); //unlocks	
 		return;
 	}
-	destroyRecursive(projectPath);
-	sendData(sockfd, makeMsg("destroy", "success", "Project destroyed"));
 
+	destroyRecursive(projectPath);
+	
+	//remove mutex for the project
+	struct mutexNode* ptr = mutexList;
+	struct mutexNode* prev = NULL;
+	while( ptr != NULL && strcmp(ptr->projectname, projectname)!=0 ){
+		prev = ptr;
+		ptr = ptr->next;
+	}	
+	if( prev == NULL ){ //project is first node
+		mutexList = mutexList->next;
+	}else{
+		prev->next = ptr->next;
+	}
+	
+	sendData(sockfd, makeMsg("destroy", "success", "Project destroyed"));
+	
+	pthread_mutex_unlock(&mutex); //unlocks	
+		
 }
 
 void serverCheckout(char* projectname, int sockfd) {
@@ -230,6 +240,7 @@ void serverCheckout(char* projectname, int sockfd) {
 }
 
 void serverCommit(struct node* dataList, int sockfd){
+	
 	char* projectPath = getPath(".", dataList->PROJECTNAME);
 
 	//sends manifest, fails if project or manifest not found
@@ -258,15 +269,19 @@ void serverCommit(struct node* dataList, int sockfd){
 }
 
 void serverPush(struct node* dataList, int sockfd){
-
+	
 	char* projectPath = getPath(".", dataList->PROJECTNAME);
+
+	pthread_mutex_t mutex = getMutex(dataList->PROJECTNAME, mutexList)->mutex;
+	pthread_mutex_lock(&mutex); //locks project	
 
 	//Fails if project not on server
 	if( dirExists(projectPath) == 0 ){
 		sendData(sockfd, makeMsg("push", "Error", "Project not on server"));
+		pthread_mutex_unlock(&mutex); //unlocks	
 		return;
 	}
-
+	
 	char* commitFPath = getPath(projectPath, COMMIT);
 
 	//tries to find matching commit
@@ -380,6 +395,7 @@ void serverPush(struct node* dataList, int sockfd){
 	}
 
 	sendData(sockfd, versionData("push", dataList->PROJECTNAME, manPath));
+	pthread_mutex_unlock(&mutex); //unlocks	
 
 }
 
@@ -421,7 +437,15 @@ void serverCreate(struct node* dataList, int sockfd){
 		sendData(sockfd, makeMsg("create", "Error", "Project already exists on server"));
 		return;
 	}
-
+	
+	//adds mutex for the project dir
+	struct mutexNode* addThis
+				 = (struct mutexNode*) malloc(sizeof(struct mutexNode));
+	addThis->projectname = projectname;
+	addThis->next = mutexList;
+	mutexList = addThis;
+	
+	
 	//initializes project on server
 	createDir(projectpath);
 	createDir(getPath(projectpath, ARCHIVE));

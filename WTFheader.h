@@ -51,9 +51,24 @@ struct manifestNode{
 	struct manifestNode* next;
 };
 
+//each project has a mutex
+struct mutexNode{
+	char* projectname;
+	pthread_mutex_t mutex;
+	struct mutexNode* next;
+};
+
+//each client connection has a thread
+struct threadNode{
+	char* name;
+	pthread_t thread;
+	int sockfd;
+	struct threadNode* next;
+};
+
 
 /** helper.c **/
-
+struct mutexNode* getMutex( char*, struct mutexNode*);
 char* append(char*, char*);
 char* appendChar(char*, char);
 char* appendData(char*, char*);

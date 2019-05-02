@@ -1,12 +1,22 @@
 #include "WTFheader.h"
 
 
+struct mutexNode* getMutex( char* projectname, struct mutexNode* mutexList ){
+	struct mutexNode* ptr = mutexList;
+	while( ptr!=NULL ){
+		if(strcmp(ptr->projectname, projectname)==0){
+			return ptr;
+		}
+		ptr=ptr->next;
+	}
+	return NULL; //should never happen
+}
+
 //To send Error or success msg
 char* makeMsg(char* command, char* signal, char* msg){
 	char* str = appendData(command, signal);
 	str = appendData(str, int2str(strlen(msg)));
 	str = appendData(str, msg);
-	printf("helper9\n");
 	return str;
 }
 
