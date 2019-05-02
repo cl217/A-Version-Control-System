@@ -273,22 +273,26 @@ void writeHistory(struct manifestNode * newCommits, char * projectpath, char * c
 	printf("path: %s\n",historyPath);
 	char * action = appendChar(command,'\n');
 
-	char * version = appendChar(int2str(newCommits->version),'\n');
-
-	int versionFD = open(historyPath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
-	if(versionFD<0){
-		printf("error1: opening\n"); return;
+	int version = 0;
+	if (newCommits != NULL) {
+		version = newCommits->version;
 	}
-	write(versionFD, action, strlen(action));
-	write(versionFD, version,strlen(version));
-	close(versionFD);
+	printf("version: %i\n",version);
+
+	// int versionFD = open(historyPath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	// if(versionFD<0){
+	// 	printf("error1: opening\n"); return;
+	// }
+	// write(versionFD, action, strlen(action));
+	// write(versionFD, version,strlen(version));
+	// close(versionFD);
+	writeToVersionFile(historyPath, action, version, "","");
 
 	struct manifestNode * ptr = newCommits->next;
 
-	printf("history:\n");
+	//printf("history:\n");
 	while (ptr!=NULL) {
 		writeToVersionFile(historyPath, ptr->code, ptr->version, ptr->path, ptr->hash);
-
 		ptr = ptr->next;
 	}
 
@@ -490,6 +494,8 @@ void serverCreate(struct node* dataList, int sockfd){
 		return;
 	}
 
+
+
 	//adds mutex for the project dir
 	struct mutexNode* addThis
 				 = (struct mutexNode*) malloc(sizeof(struct mutexNode));
@@ -504,6 +510,19 @@ void serverCreate(struct node* dataList, int sockfd){
 	createDir(getPath(projectpath, COMMIT));
 	char* manifestPath = getPath(projectpath, MANIFEST);
 	newVersionFile(1, manifestPath);
+
+	//create .History file
+	char * historyPath = getPath(projectpath, ".History");
+	printf("path: %s\n",historyPath);
+	char * action = appendChar("CREATE",'\n');
+
+	int historyFD = open(historyPath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	if(historyFD<0){
+		printf("error: opening .History in wtfcreate()\n"); return;
+	}
+	write(historyFD, action, strlen(action));
+	write(historyFD, appendChar("0",'\n'), strlen("00"));
+	close(historyFD);
 
 	//Sends initialized manifest to client
 	sendData(sockfd, versionData("create",projectname, manifestPath));
