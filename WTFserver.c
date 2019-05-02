@@ -310,11 +310,35 @@ void serverPush(struct node* dataList, int sockfd){
 	}
 	closedir(dir);
 
+
 	//read in manifest
 	char* manPath = getPath(projectPath, MANIFEST);
 	struct manifestNode* mList = parseManifest(readFileData(manPath));
 	int versionNum = mList->version;
 
+	
+	char* copyPath = getPath(projectPath, 
+						getPath(ARCHIVE, append(int2str(versionNum),".tar.gz")));
+	char* tempPath = getPath(".", append(dataList->PROJECTNAME,".tar.gz"));
+	
+	
+	/*
+		TODO: More EC: do this with zlib	
+		figure out a format to separate files
+		zlib compresses into a single file
+		undo format to reconstruct files from the single compressed file
+	*/
+	char* syscmd = append("tar -czvf ", tempPath);
+	syscmd = append(syscmd, " ");
+	syscmd = append(syscmd, dataList->PROJECTNAME);
+	
+	//TODO: do this without using system
+	system(syscmd);
+	syscmd = append("mv ", append(append(tempPath, " "), copyPath));
+	system(syscmd);
+
+	
+	/*
 	//copy project to temporary ./.projectname on server
 	char* tempPath = getPath(".", append(".", dataList->PROJECTNAME));
 	createDir(tempPath);
@@ -326,6 +350,7 @@ void serverPush(struct node* dataList, int sockfd){
 	createDir(copyPath);
 	copydir(tempPath, copyPath);
 	destroyRecursive(tempPath);
+	*/
 
 	//remove all deleted commits from list of commits
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);

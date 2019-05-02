@@ -2,6 +2,9 @@
 
 
 int sendData( int fd, char* data ){
+
+	//TODO: EC- use zlib to compress data
+
 	int size = strlen(data);
 	write(fd, &size, sizeof(int)); //send size of data
 	int code = receiveConfirmation(fd); //get confirmation
@@ -14,6 +17,7 @@ int sendData( int fd, char* data ){
 }
 
 struct node* receiveData( int fd ){
+	
 	//receive data size
 	int dataSize;
 	read(fd, &dataSize, sizeof(int));
@@ -24,6 +28,8 @@ struct node* receiveData( int fd ){
 	read(fd, &data, dataSize);
 	data[dataSize]='\0';
 	sendConfirmation(fd, 1);
+	
+	//TODO: EC- decompress data and pass into splitData
 	
 	return splitData(data);	
 }
