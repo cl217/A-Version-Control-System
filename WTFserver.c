@@ -166,12 +166,33 @@ void executeCommand(struct node* dataList, int sockfd){
 	}else if(strcmp(command, "currentversion")==0){
 		serverSendManifest(dataList, sockfd);
 	}else if(strcmp(command, "history")==0){
-
+		serverHistory(dataList, sockfd);
 	}else if(strcmp(command, "rollback")==0){
 
 	}else{
 		//should never happen
 	}
+}
+
+void serverHistory(struct node * dataList, int sockfd) {
+	printf("1\n");
+	char * projectname = dataList->PROJECTNAME;
+	printf("2\n");
+	char * projectpath = getPath(".", projectname);
+	char * historyPath = getPath(projectpath, ".History");
+
+	if( dirExists(projectpath) == 0 ){
+		printf("error1\n");
+		sendData(sockfd, makeMsg(dataList->name, "Error", "Project not on server"));
+		return; //unsuccessful
+	}
+
+	//char * data = readFileData(historyPath);
+	char* data = versionData(dataList->name,projectname, historyPath);
+	printf("sending: %s\n",data);
+
+	sendData(sockfd, data); //Sends data to client
+
 }
 
 void serverDestroy(char* projectname, int sockfd) {
