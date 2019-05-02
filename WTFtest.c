@@ -1,14 +1,21 @@
 #include "WTFheader.h"
 
-#define PORT "2000"
+#define PORT "4000"
 #define IP "127.0.0.1"
 
+pid_t serverProc;
+void exitSignalHandler( int sig_num ){
+	kill(serverProc, SIGINT);
+}
+
 int main( int argc, char** argv ){
+
+	signal(SIGINT, exitSignalHandler);	
+	
 	int complete;
 	
-	
-	//server: ./WTFserver <PORT>
-	pid_t serverProc = fork();
+	printf("\nserver: ./WTFserver <PORT>\n");
+	serverProc = fork();
 	if(serverProc==0){
 		chdir("./server");
 		char* arr[] = {"./WTFserver", PORT, NULL};
@@ -16,7 +23,7 @@ int main( int argc, char** argv ){
 	}
 	
 	
-	//client1: ./WTF configure <IP> <PORT>
+	printf("\nclient1: ./WTF configure <IP> <PORT>\n");
 	pid_t clientProc=fork();
 	if(clientProc==0){
 		chdir("./client1");
@@ -26,7 +33,7 @@ int main( int argc, char** argv ){
 		waitpid(clientProc, &complete,0);
 	}
 	
-	//client2: ./WTF configure <IP> <PORT>
+	printf("\nclient2: ./WTF configure <IP> <PORT>\n");
 	clientProc=fork();
 	if(clientProc==0){
 		chdir("./client2");
@@ -36,8 +43,8 @@ int main( int argc, char** argv ){
 		waitpid(clientProc, &complete,0);
 	}
 
-	/*
-	//client1: ./WTF create testproj
+	
+	printf("\nclient1: ./WTF create testproj\n");
 	clientProc=fork();
 	if(clientProc==0){
 		chdir("./client1");
@@ -47,7 +54,7 @@ int main( int argc, char** argv ){
 		waitpid(clientProc, &complete,0);
 	}
 
-	// client2: ./WTF checkout testproj
+	printf("\nclient2: ./WTF checkout testproj\n");
 	clientProc=fork();
 	if(clientProc==0){
 		chdir("./client2");
@@ -58,7 +65,7 @@ int main( int argc, char** argv ){
 	}
 	
 	
-	// client1: ./WTF add testproj <filepath>
+	printf("\nclient1: ./WTF add testproj <filepath>\n");
 	clientProc=fork();
 	if(clientProc==0){
 		chdir("./client1");
@@ -68,7 +75,7 @@ int main( int argc, char** argv ){
 		waitpid(clientProc, &complete,0);
 	}
 	
-	// client1: ./WTF commit testproj
+	printf("\nclient1: ./WTF commit testproj\n");
 	clientProc=fork();
 	if(clientProc==0){
 		chdir("./client1");
@@ -78,7 +85,7 @@ int main( int argc, char** argv ){
 		waitpid(clientProc, &complete,0);
 	}
 	
-	// client1: ./WTF push testproj
+	printf("\nclient1: ./WTF push testproj\n");
 	clientProc=fork();
 	if(clientProc==0){
 		chdir("./client1");
@@ -88,7 +95,7 @@ int main( int argc, char** argv ){
 		waitpid(clientProc, &complete,0);
 	}
 	
-	// client2: ./WTF update testproj
+	printf("\nclient2: ./WTF update testproj\n");
 	clientProc=fork();
 	if(clientProc==0){
 		chdir("./client2");
@@ -98,7 +105,7 @@ int main( int argc, char** argv ){
 		waitpid(clientProc, &complete,0);
 	}
 	
-	//client2: ./WTF upgrade testproj
+	printf("\nclient2: ./WTF upgrade testproj\n");
 	clientProc=fork();
 	if(clientProc==0){
 		chdir("./client2");
@@ -107,7 +114,7 @@ int main( int argc, char** argv ){
 	}else{
 		waitpid(clientProc, &complete,0);
 	}
-	*/
+	
 	
 	
 	//TODO: 
@@ -116,7 +123,7 @@ int main( int argc, char** argv ){
 	// ./WTF versionhistory
 	// ./WTF currentversion
 	
-	/*
+	
 	//client2: ./WTF destroy testproj
 	clientProc=fork();
 	if(clientProc==0){
@@ -126,9 +133,9 @@ int main( int argc, char** argv ){
 	}else{
 		waitpid(clientProc, &complete,0);
 	}
-	*/
 	
-	//kill(serverProc, SIGINT);
+	
+	kill(serverProc, SIGINT);
     	return 0;	
 	
 }

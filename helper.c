@@ -6,6 +6,7 @@ char* makeMsg(char* command, char* signal, char* msg){
 	char* str = appendData(command, signal);
 	str = appendData(str, int2str(strlen(msg)));
 	str = appendData(str, msg);
+	printf("helper9\n");
 	return str;
 }
 

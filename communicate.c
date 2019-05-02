@@ -5,6 +5,7 @@ int sendData( int fd, char* data ){
 	int size = strlen(data);
 	write(fd, &size, sizeof(int)); //send size of data
 	int code = receiveConfirmation(fd); //get confirmation
+	
 	if(code != 0 ){
 		write(fd, data, size); //send data
 		receiveConfirmation(fd); //get confirmation

@@ -23,6 +23,7 @@ struct mutexNode{
 
 //each client connection has a thread
 struct threadNode{
+	char* name;
 	pthread_t thread;
 	int sockfd;
 	struct threadNode* next;
@@ -34,14 +35,14 @@ struct threadNode* threadList = NULL;
 void exitSignalHandler( int sig_num ){
 	while( threadList != NULL ){
 		close(threadList->sockfd);
-		//TODO: should the thread be killed too?
-		
 		if( threadList->next == NULL ){
+			printf("name: %s\n", threadList->name);
 			printf("Server: Server has been shut down.\n");
 		}else{
 			//TODO: should probably identify the client
 			printf("Server: A client has been disconnected\n");
 		}	
+		pthread_cancel(threadList->thread);
 		threadList = threadList->next;
 	}
 
@@ -53,9 +54,11 @@ void *threadHandler(void *fd_pointer){
 	struct node* dataList = receiveData(sockfd);
 	executeCommand(dataList, sockfd);
 	
+	threadList = threadList->next; //remove finished thread from list
+	
 	//Command has been executed here
 	close(sockfd); //close client connection
-	threadList = threadList->next; //remove finished thread from list
+	printf("Server: Client disconnected");
 }
 
 
@@ -78,11 +81,13 @@ int main( int argc, char** argv ){
 	if(sockfd < 0){
 		printf("Error: Can't open socket\n"); return 1;
 	}
-	printf("Server: running...\n");
 
+	//adds server listening thread to threadList
 	struct threadNode* serverThread = (struct threadNode*) malloc(sizeof(struct threadNode));
 	serverThread->sockfd = sockfd;
+	serverThread->name = "server";
 	threadList = serverThread;
+	
 	
 	struct sockaddr_in serverAddress;
 	serverAddress.sin_family = AF_INET;
@@ -92,12 +97,33 @@ int main( int argc, char** argv ){
 	if( bind(sockfd,(struct sockaddr*) &serverAddress, sizeof(serverAddress)) < 0 ){
 		printf("Error: can't bind.\n"); return 1;
 	}
+	
+	printf("Server: running...\n");
+	
+	/*
+	//TODO: set up mutex for each project directory
+	DIR* dir = opendir(".");
+	struct dirent* entry;
+	while((entry=readdir(dir)) != NULL ){
+		if(entry->d_type == DT_DIR 
+			&& strcmp(entry->d_name, ".")!=0 && strcmp(entry->d_name, "..")!=0){
+			//Do stuff	
+			struct mutexNode* addThis = (struct mutexNode*) malloc(sizeof(mutexNode));
+			addThis->projectname = entry->d_name;
+			addThis->next = mutexList;
+			mutexList = addThis;
+			
+			
+			
+		}
+	}
+	closedir(dir);
+	*/
+	
 
 	listen(sockfd, 20);
-
 	struct sockaddr_in clientAddress;
 	socklen_t clientLen = sizeof(clientAddress);
-	//pid_t childpid;
 
 	//loop listens for connections
 	int connectionfd;
@@ -111,18 +137,20 @@ int main( int argc, char** argv ){
 		
 		//new thread for new client
 		int* newsockfdptr;
-		newsockfdptr = malloc(1);
+		newsockfdptr = malloc(sizeof(int));
 		*newsockfdptr = connectionfd;
 		
 		struct threadNode* currentThread = 
 					(struct threadNode*)malloc(sizeof(struct threadNode));
 		currentThread->sockfd = connectionfd;
 		currentThread->next = threadList;
+		currentThread->name = "client";
 		threadList = currentThread;
 		
 		pthread_create(&(currentThread->thread), NULL, threadHandler, (void*) newsockfdptr);
 		
 	}
+	
 	return 0;
 }
 
@@ -227,9 +255,6 @@ void serverCommit(struct node* dataList, int sockfd){
 	char* writeout = dataList->FIRSTFILENODE->content;
 	write(commitFD, writeout, strlen(writeout));
 	close(commitFD);
-
-	//sends success signal to client
-	sendData(sockfd,makeMsg("checkout", "Success", "success"));
 }
 
 void serverPush(struct node* dataList, int sockfd){
@@ -387,6 +412,7 @@ int serverSendManifest(struct node* dataList, int sockfd){
 
 //Create project and manifests, sends manifest to client
 void serverCreate(struct node* dataList, int sockfd){
+
 	char* projectname = dataList->PROJECTNAME;
 	char* projectpath = getPath(".", projectname);
 
