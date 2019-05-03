@@ -168,16 +168,49 @@ void executeCommand(struct node* dataList, int sockfd){
 	}else if(strcmp(command, "history")==0){
 		serverHistory(dataList, sockfd);
 	}else if(strcmp(command, "rollback")==0){
-
+		serverRollback(dataList,sockfd);
 	}else{
 		//should never happen
 	}
 }
 
-void serverHistory(struct node * dataList, int sockfd) {
-	printf("1\n");
+void serverRollback(struct node * dataList, int sockfd) {
 	char * projectname = dataList->PROJECTNAME;
-	printf("2\n");
+	struct node * ptr = dataList;
+	char * versionAndProject = NULL;
+
+	//find version and project info
+	while (ptr!=NULL) {
+		if (strcmp(ptr->nodeType,"project") == 0) {
+			versionAndProject = ptr->name;
+		}
+		ptr=ptr->next;
+	}
+
+	//break version and project into 2 strings
+	char * pname = NULL; //project name
+	char * version = NULL; //desired version to roll back to
+	char * token = NULL;
+	int i = 0;
+	while(versionAndProject[i]!= '\t'){
+		token = appendChar(token,versionAndProject[i]);
+		i++;
+	}
+	pname = token; //project
+	token = NULL;
+	i++; //skip delim
+	while(i < strlen(versionAndProject)){
+		token = appendChar(token, versionAndProject[i]);
+		i++;
+	}
+	version = token; //version
+	printf("p: %s\nv: %s\n",pname,version);
+
+
+}
+
+void serverHistory(struct node * dataList, int sockfd) {
+	char * projectname = dataList->PROJECTNAME;
 	char * projectpath = getPath(".", projectname);
 	char * historyPath = getPath(projectpath, ".History");
 
@@ -189,7 +222,7 @@ void serverHistory(struct node * dataList, int sockfd) {
 
 	//char * data = readFileData(historyPath);
 	char* data = versionData(dataList->name,projectname, historyPath);
-	printf("sending: %s\n",data);
+	//printf("sending: %s\n",data);
 
 	sendData(sockfd, data); //Sends data to client
 

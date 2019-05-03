@@ -117,7 +117,8 @@ void serverUpgrade(struct node*, int);
 void serverCheckout(char*, int);
 void serverDestroy(char *, int);
 void serverCurrentVersion( char *, int);
-void serverHistory(struct node * dataList, int sockfd);
+void serverHistory(struct node *, int);
+void serverRollback(struct node *, int);
 
 
 

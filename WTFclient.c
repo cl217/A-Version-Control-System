@@ -844,4 +844,20 @@ void wtfhistory( char* projectname ){
 }
 
 //	4.1
-void wtfrollback( char* projectname, char* version ){}
+void wtfrollback( char* projectname, char* version ){
+	wtfconnect(); //shuts down program if cant connect
+
+	char * projectData = appendData(projectname,version); //append version to projectdata
+
+	//send rollback command
+	sendCommandProject(sockfd, "rollback", projectData); //1
+
+	struct node* dataList = receiveData(sockfd); //2
+
+	if( strcmp(dataList->next->name, "Error")==0 ){
+		printf("Error: %s\n", dataList->next->content);
+		exitHandler();
+	}
+	//sendData(sockfd,version);
+
+}
