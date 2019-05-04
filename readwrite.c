@@ -5,15 +5,24 @@ int fileCount = 0;
 void compressProject(char* projectname, char* outFilePath){
 
 	allFileData = NULL;
-
+	fileCount = 0;
+	
 	getAllFiles(getPath(".", projectname));
 	
+	printf("fileCount: %d\n", fileCount);
+	
 	allFileData = appendData( dataHeader("compress", "ProjectFileContent", projectname, fileCount), allFileData);
-
+	
+	//printf("allFileData: %s\n", allFileData);
+	
 	int dataLen = strlen(allFileData);
+	
+	printf("outPath: %s\n", outFilePath);
 	
 	int fd = createFile(outFilePath);
 	close(fd);
+	
+	
 	gzFile fi = (gzFile)gzopen(outFilePath, "wb");
 	gzwrite(fi, (void*)allFileData, dataLen);
 	gzclose(fi);
@@ -33,6 +42,7 @@ void getAllFiles(char* inDirPath){
 				&& strcmp(".", entry->d_name)!=0 && strcmp("..", entry->d_name)!=0 ){
 			getAllFiles(entrypath); //go in subdirectory-recursive traversal
 		}else if(entry->d_type == DT_REG){ //is file
+			printf("file: %s\n", entrypath);
 			fileCount++;
 			allFileData = appendFileData(allFileData, entrypath);				
 		}

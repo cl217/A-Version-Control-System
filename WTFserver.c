@@ -185,10 +185,10 @@ void serverRollback(struct node * dataList, int sockfd) {
 	version = token; //version
 	printf("p: %s\nv: %s\n",pname,version);
 
-	char * versionFolder = getPath(".",pname);
-	versionFolder = getPath(versionFolder,".archive");
+	char * versionFolder = getPath(".",append(".", pname));
+	versionFolder = getPath(versionFolder, ARCHIVE);
 	char * versionPath = getPath(versionFolder,version);
-	versionPath = append(versionPath,".tar.gz");
+	versionPath = append(versionPath,".gz");
 	printf("vpath: %s\n",versionPath);
 
 	//hold original history
@@ -197,20 +197,14 @@ void serverRollback(struct node * dataList, int sockfd) {
 	char * history = readFileData(hpath);
 	//struct manifestNode* histList =  parseManifest(history);
 
-	//de tar file
-	char* syscmd = append("tar -xzvf ", versionPath);
-	syscmd = append(syscmd," ");
-	system(syscmd);
-
 	//destory original dir
 	destroyRecursive(getPath(".",pname));
 
-	//move archive to original
-	char * moveDir = append("mv ./.", pname);
-	moveDir = append(moveDir, " ./");
-	moveDir = append(moveDir, pname);
-	system(moveDir);
-	return;
+	//decompress file to new project file
+	decompressDir(versionPath, getPath(".", pname));
+
+
+	//TODO - Remove all files in .archive ahead of the rollback version	
 
 	//TODO - delete files not in manifest, write history
 
@@ -298,14 +292,14 @@ void serverCheckout(char* projectname, int sockfd) {
 }
 
 void serverCommit(struct node* dataList, int sockfd){
-	printf("server273\n");
+	//printf("server273\n");
 	char* projectPath = getPath(".", dataList->PROJECTNAME);
 
 	//sends manifest, fails if project or manifest not found
 	if(serverSendManifest(dataList, sockfd)==0){
 		return;
 	}
-	printf("server280\n");
+	//printf("server280\n");
 	dataList = receiveData(sockfd); //gets the new commit data
 	//count num of active commits in .commit folder
 	char* commitFolderPath = getPath(projectPath, COMMIT);
@@ -318,17 +312,17 @@ void serverCommit(struct node* dataList, int sockfd){
 		}
 	}
 	closedir(dir);
-	printf("server293\n");
+	//printf("server293\n");
 	//create a new commit in .commit folder
 	int commitFD = createFile(getPath(commitFolderPath, int2str(countFiles)));
 	char* writeout = dataList->FIRSTFILENODE->content;
 	write(commitFD, writeout, strlen(writeout));
 	close(commitFD);
-	printf("server299\n");
+	//printf("server299\n");
 }
 
 void writeHistory(struct manifestNode * newCommits, int newVersion, char * projectpath) {
-	printf("server 304\n");
+	//printf("server 304\n");
 	char * historyPath = getPath(projectpath, HISTORY);
 
 	int historyFD = open(historyPath, O_WRONLY|O_APPEND);
@@ -336,7 +330,7 @@ void writeHistory(struct manifestNode * newCommits, int newVersion, char * proje
 	write(historyFD, "\n", 1);
 	write(historyFD, versionNum, strlen(versionNum));
 	close(historyFD);
-	printf("server311\n");
+	//printf("server311\n");
 
 	struct manifestNode * ptr = newCommits->next;
 	while (ptr!=NULL) {
@@ -348,6 +342,8 @@ void writeHistory(struct manifestNode * newCommits, int newVersion, char * proje
 void serverPush(struct node* dataList, int sockfd){
 
 	char* projectPath = getPath(".", dataList->PROJECTNAME);
+	char* dataPath = getPath(".", append(".", dataList->PROJECTNAME));
+	printf("dataPath: %s\n", dataPath);
 
 	pthread_mutex_t mutex = getMutex(dataList->PROJECTNAME, mutexList)->mutex;
 	pthread_mutex_lock(&mutex); //locks project
@@ -392,26 +388,11 @@ void serverPush(struct node* dataList, int sockfd){
 	struct manifestNode* mList = parseManifest(readFileData(manPath));
 	int versionNum = mList->version;
 
-
-	/*
-		TODO: More EC: do this with zlib (zlib cant compress directories)
-		figure out a format to separate files
-		zlib compresses into a single file
-		undo format to reconstruct files from the single compressed file
-	*/
-
-
-	//copy project to temporary ./.projectname on server
-	char* tempPath = getPath(".", append(".", dataList->PROJECTNAME));
-	createDir(tempPath);
-	copydir(projectPath, tempPath);
-
-	//use zlib to compress into .archive
-	char* compressPath = getPath(projectPath, getPath(ARCHIVE, int2str(versionNum)));
+	//use zlib to compress project into .archive
+	char* archivePath = getPath(dataPath, ARCHIVE);	
+	printf("archivePath: %s\n", archivePath);
+	char* compressPath = getPath(archivePath, append(int2str(versionNum),".gz"));
 	compressProject(dataList->PROJECTNAME, compressPath);
-
-	//delete temporary project copy
-	destroyRecursive(tempPath);
 
 	//remove all deleted commits from list of commits
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
@@ -425,7 +406,7 @@ void serverPush(struct node* dataList, int sockfd){
 		}
 		cPtr = cPtr->next;
 	}
-	printf("server405\n");
+	//printf("server405\n");
 	//create/rewrite all the files sent
 	struct node* ptr = dataList->FIRSTFILENODE->next;
 	while( ptr != NULL ){
@@ -469,7 +450,7 @@ void serverPush(struct node* dataList, int sockfd){
 		ptr=ptr->next;
 	}
 
-	printf("server449\n");
+	//printf("server449\n");
 
 	int newVersion = (mList->version)+1;
 	newVersionFile( newVersion , manPath);
@@ -480,7 +461,7 @@ void serverPush(struct node* dataList, int sockfd){
 		}
 		mList = mList->next;
 	}
-	printf("server459\n");
+	//printf("server459\n");
 
 
 
@@ -540,7 +521,9 @@ void serverCreate(struct node* dataList, int sockfd){
 
 	//initializes project on server
 	createDir(projectpath);
-	createDir(getPath(projectpath, ARCHIVE));
+	char* dataDirName = append(".", projectname);
+	createDir(getPath(".", dataDirName));
+	createDir(getPath(dataDirName, ARCHIVE)); 
 	createDir(getPath(projectpath, COMMIT));
 	char* manifestPath = getPath(projectpath, MANIFEST);
 	newVersionFile(1, manifestPath);
