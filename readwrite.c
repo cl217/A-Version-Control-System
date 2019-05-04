@@ -1,7 +1,5 @@
 #include "WTFheader.h"
 
-
-
 char* allFileData;
 int fileCount = 0;
 void compressProject(char* projectname, char* outFilePath){

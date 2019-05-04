@@ -5,7 +5,7 @@ WTF: WTFserver.o WTFclient.o helper.o communicate.o readwrite.o
 	gcc -g -std=c99 -lm -lssl -lcrypto -lz WTFclient.o helper.o communicate.o readwrite.o -o WTF
 	gcc -g -std=c99 -lm -lssl -pthread -lz -lcrypto WTFserver.o helper.o communicate.o readwrite.o -o WTFserver
 	
-TEST: WTFtest.o helper.o readwrite.o
+TEST: WTFtest.o
 	mkdir server
 	mkdir client1
 	mkdir client1/testproj
@@ -16,10 +16,10 @@ TEST: WTFtest.o helper.o readwrite.o
 	cp WTFserver server
 	cp WTF client1
 	cp WTF client2
-	gcc -g -std=c99 -lm -lssl -lcrypto WTFtest.o helper.o readwrite.o -o WTFtest
+	gcc -g WTFtest.o -o WTFtest
 		
 WTFserver.o: WTFserver.c WTFheader.h
-	gcc -g -std=c99 -pthread -c WTFserver.c
+	gcc -g -std=c99 -pthread -lz -c WTFserver.c
 
 WTFclient.o: WTFclient.c WTFheader.h
 	gcc -g -std=c99 -c WTFclient.c	
@@ -34,7 +34,7 @@ readwrite.o: readwrite.c WTFheader.h
 	gcc -g -std=c99 -lssl -lcrypto -lz -c readwrite.c
 
 WTFtest.o: WTFtest.c WTFheader.h
-	gcc -g -std=c99 -c WTFtest.c
+	gcc -g -c WTFtest.c
 
 clean: 
 	rm -rf WTF WTFclient.o WTFserver.o helper.o readwrite.o communicate.o WTFtest.o WTFserver WTFclient WTFtest server client1 client2

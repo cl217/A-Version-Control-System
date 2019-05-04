@@ -3,8 +3,6 @@
 
 int sendData( int fd, char* data ){
 	
-	//printf("Sending: %s\n", data);
-	
 	//EC- use zlib to compress data
 	int avail_comp = 3*strlen(data);
 	char compressedData[avail_comp];
@@ -14,26 +12,32 @@ int sendData( int fd, char* data ){
 	defstream.zfree = Z_NULL;
 	defstream.opaque = Z_NULL;
 	
-	defstream.avail_in = (uInt)strlen(data)+1;
+	defstream.avail_in = (uInt)strlen(data)+1; //includes null term
 	defstream.next_in = (Bytef*) data;
-	defstream.avail_out = (uInt)avail_comp;
-	defstream.next_out = (Bytef*)compressedData;
+	defstream.avail_out = (uInt) avail_comp;
+	defstream.next_out = (Bytef*) compressedData;
 	
 	deflateInit(&defstream, Z_BEST_COMPRESSION);
 	deflate(&defstream, Z_FINISH);
 	deflateEnd(&defstream);
 	
 
-	int sizeCompressed = defstream.total_out; //size of compressed data
+	int sizeCompressed = (int) defstream.total_out; //size of compressed data
 	write(fd, &sizeCompressed, sizeof(int)); //send size of compressed data
 	int code = receiveConfirmation(fd); //get confirmation
 	
-	int size = strlen(data)+1;
+	int size = strlen(data)+1; //includes null term
+	
+	//printf("Sending: %s\n", data);
+	//printf("SendingDataSize: %d\n", size); 
+	//printf("SendingCompSize: %d\n", sizeCompressed);	
+	//printf("SendingCompData: %s\n", compressedData);
+		
 	write(fd, &size, sizeof(int)); //send size of regular data
 	code = receiveConfirmation(fd); //get confirmation
 	
 	if(code != 0 ){
-		write(fd, compressedData, size); //send data
+		write(fd, compressedData, sizeCompressed); //send data
 		receiveConfirmation(fd); //get confirmation
 	}
 	return code; //0 if error
@@ -56,15 +60,19 @@ struct node* receiveData( int fd ){
 	read(fd, &data, compressedSize);
 	sendConfirmation(fd, 1);
 
+	//printf("RecievingDataSize: %d\n", dataSize); 
+	//printf("RecievingCompSize: %d\n", compressedSize);	
+	//printf("RecievingCompData: %d\n", data);
+
 	//EC- decompress data and pass into splitData
-	char* decompressedData = (char*)malloc((dataSize)*sizeof(char));
+	char* decompressedData = (char*)malloc((dataSize)*sizeof(char)); //includes null
 
 	z_stream infstream;
 	infstream.zalloc = Z_NULL;
 	infstream.zfree = Z_NULL;
 	infstream.opaque = Z_NULL;
 	
-	infstream.avail_in = (uInt)compressedSize;
+	infstream.avail_in = (uInt) compressedSize;
 	infstream.next_in = (Bytef*) data;
 	infstream.avail_out = (uInt) dataSize;
 	infstream.next_out = (Bytef*) decompressedData;
@@ -73,7 +81,7 @@ struct node* receiveData( int fd ){
 	inflate(&infstream, Z_NO_FLUSH);
 	inflateEnd(&infstream);
 	
-	//printf("Decompressed: %s\n", decompressedData);
+	//printf("Receiving: %s\n", decompressedData);
 	
 	return splitData(decompressedData);
 }

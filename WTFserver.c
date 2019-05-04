@@ -400,26 +400,18 @@ void serverPush(struct node* dataList, int sockfd){
 		undo format to reconstruct files from the single compressed file
 	*/
 
-	printf("server374\n");
-	char* tarPath = getPath(projectPath,
-				getPath(ARCHIVE, append(int2str(versionNum), ".tar.gz")));
-	printf("tarpath: %s\n", tarPath);
 
 	//copy project to temporary ./.projectname on server
 	char* tempPath = getPath(".", append(".", dataList->PROJECTNAME));
 	createDir(tempPath);
 	copydir(projectPath, tempPath);
 
-	//make tar of file in .version
-	char* syscmd = append("tar -czvf ", tarPath);
-	syscmd = append(syscmd, " ");
-	syscmd = append(syscmd, append(".", dataList->PROJECTNAME));
-	system(syscmd);
+	//use zlib to compress into .archive
+	char* compressPath = getPath(projectPath, getPath(ARCHIVE, int2str(versionNum)));
+	compressProject(dataList->PROJECTNAME, compressPath);
 
 	//delete temporary project copy
 	destroyRecursive(tempPath);
-
-	printf("server391\n");
 
 	//remove all deleted commits from list of commits
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
