@@ -63,7 +63,6 @@ struct mutexNode{
 
 //each client connection has a thread
 struct threadNode{
-	char* name;
 	pthread_t thread;
 	int sockfd;
 	struct threadNode* next;

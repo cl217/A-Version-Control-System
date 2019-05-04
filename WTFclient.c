@@ -582,44 +582,46 @@ void wtfupgrade( char* projectname ){
 		uPtr = uPtr->next;
 	}
 
-	//create/rewrite all files received from server
-	struct node* ptr = dataList->FIRSTFILENODE;
-	while( ptr != NULL ){
-		int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+	if( strcmp(dataList->next->name, "Success")!=0 ){ //if not already done
+		//create/rewrite all files received from server
+		struct node* ptr = dataList->FIRSTFILENODE;
+		while( ptr != NULL ){
+			int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 
-		if( fd<0 ){ //can't open, file in subdirectories that havent been created
-			char* tempPath = (char*)malloc((strlen(ptr->name)+1)*sizeof(char));
-			strcpy(tempPath, ptr->name);
-			createSubdir(tempPath); //create subdirectories
-			fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 ); //retry opening file
-			if( fd<0){ //should not happen
-				printf("Error creating: %s\n", ptr->name);
-				return;
+			if( fd<0 ){ //can't open, file in subdirectories that havent been created
+				char* tempPath = (char*)malloc((strlen(ptr->name)+1)*sizeof(char));
+				strcpy(tempPath, ptr->name);
+				createSubdir(tempPath); //create subdirectories
+				fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 ); //retry opening file
+				if( fd<0){ //should not happen
+					printf("Error creating: %s\n", ptr->name);
+					return;
+				}
 			}
-		}
 
-		//update manifest
-		struct manifestNode* uNode = findFile(ptr->name, uList);
-		struct manifestNode* mNode = findFile(ptr->name, mList);
-		if( mNode == NULL ){ //if new file to be created
-			struct manifestNode* addThis = (struct manifestNode*)malloc(1*sizeof(struct manifestNode));
-			addThis->code = "uptodate";
-			addThis->version = uNode->version;
-			addThis->path = uNode->path;
-			addThis->hash = uNode->hash;
-			addThis->next = mList->next;
-			mList->next = addThis;
-		}else{ //if existing file to be updates
-			mNode->code = "uptodate";
-			mNode->version = uNode->version;
-			mNode->hash = uNode->hash;
-		}
+			//update manifest
+			struct manifestNode* uNode = findFile(ptr->name, uList);
+			struct manifestNode* mNode = findFile(ptr->name, mList);
+			if( mNode == NULL ){ //if new file to be created
+				struct manifestNode* addThis = (struct manifestNode*)malloc(1*sizeof(struct manifestNode));
+				addThis->code = "uptodate";
+				addThis->version = uNode->version;
+				addThis->path = uNode->path;
+				addThis->hash = uNode->hash;
+				addThis->next = mList->next;
+				mList->next = addThis;
+			}else{ //if existing file to be updates
+				mNode->code = "uptodate";
+				mNode->version = uNode->version;
+				mNode->hash = uNode->hash;
+			}
 
-		if( ptr->content != NULL ){ //write file contents if not empty
-			write(fd, ptr->content, strlen(ptr->content));
+			if( ptr->content != NULL ){ //write file contents if not empty
+				write(fd, ptr->content, strlen(ptr->content));
+			}
+			close(fd);
+			ptr=ptr->next;
 		}
-		close(fd);
-		ptr=ptr->next;
 	}
 
 	//write out updates manifest

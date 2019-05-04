@@ -7,7 +7,6 @@ void exitSignalHandler( int sig_num ){
 	while( threadList != NULL ){
 		close(threadList->sockfd);
 		if( threadList->next == NULL ){
-			printf("name: %s\n", threadList->name);
 			printf("Server: Server has been shut down.\n");
 		}else{
 			//TODO: should probably identify the client
@@ -57,7 +56,6 @@ int main( int argc, char** argv ){
 	//adds server listening thread to threadList
 	struct threadNode* serverThread = (struct threadNode*) malloc(sizeof(struct threadNode));
 	serverThread->sockfd = sockfd;
-	serverThread->name = "server";
 	threadList = serverThread;
 
 
@@ -112,7 +110,6 @@ int main( int argc, char** argv ){
 					(struct threadNode*)malloc(sizeof(struct threadNode));
 		currentThread->sockfd = connectionfd;
 		currentThread->next = threadList;
-		currentThread->name = "client";
 		threadList = currentThread;
 
 		pthread_create(&(currentThread->thread), NULL, threadHandler, (void*) newsockfdptr);
@@ -154,7 +151,11 @@ void executeCommand(struct node* dataList, int sockfd){
 }
 
 void serverRollback(struct node * dataList, int sockfd) {
-
+	
+	//TODO: make sure the version number is valid. 1<=version<currentversion
+		//if not, send to client an error msg
+		
+		
 	//find version and project info
 	char * versionAndProject = dataList->PROJECTNAME;
 
@@ -199,6 +200,8 @@ void serverRollback(struct node * dataList, int sockfd) {
 	//TODO - Remove all files in .archive >= of the rollback version	
 
 	//TODO - write history
+	
+	//TODO - send to client a success msg
 
 }
 
@@ -543,7 +546,7 @@ void serverUpgrade(struct node* dataList, int sockfd){
 	//makes data to be sent of all files to be added/updated
 	while( uList != NULL ){
 		//printf("path: %s\n", uList->path);
-		if( uList->code != "D" ){
+		if( strcmp(uList->code, "D")!=0 ){
 			data = appendFileData(data, uList->path);
 			count++;
 		}
@@ -551,7 +554,12 @@ void serverUpgrade(struct node* dataList, int sockfd){
 	}
 	printf("server557\n");
 	//Sends the data to client
-	data = appendData(dataHeader("upgrade", "ProjectFileContent", dataList->PROJECTNAME, count), data);
-	sendData(sockfd, data);
-	printf("server562\n");
+	
+	if( count > 0 ){
+		data = appendData(dataHeader("upgrade", "ProjectFileContent", dataList->PROJECTNAME, count), data);
+		sendData(sockfd, data);
+	}else{
+		sendData(sockfd, makeMsg("upgrade", "Success", "Delete everything in upgrade"));
+	}
+	
 }
