@@ -95,6 +95,40 @@ int main( int argc, char** argv ){
 		waitpid(clientProc, &complete,0);
 	}
 	
+	
+	
+	
+	printf("\nclient1: ./WTF add testproj <filepath>\n");
+	clientProc=fork();
+	if(clientProc==0){
+		chdir("./client1");
+		char* arr[] = {"./WTF", "add", "testproj", "folder1/file2.c", NULL};
+		execv("./WTF", arr);
+	}else{
+		waitpid(clientProc, &complete,0);
+	}
+	
+	printf("\nclient1: ./WTF commit testproj\n");
+	clientProc=fork();
+	if(clientProc==0){
+		chdir("./client1");
+		char* arr[] = {"./WTF", "commit", "testproj", NULL};
+		execv("./WTF", arr);
+	}else{
+		waitpid(clientProc, &complete,0);
+	}
+	
+	printf("\nclient1: ./WTF push testproj\n");
+	clientProc=fork();
+	if(clientProc==0){
+		chdir("./client1");
+		char* arr[] = {"./WTF", "push", "testproj", NULL};
+		execv("./WTF", arr);
+	}else{
+		waitpid(clientProc, &complete,0);
+	}
+	
+	/*
 	printf("\nclient2: ./WTF update testproj\n");
 	clientProc=fork();
 	if(clientProc==0){
@@ -114,6 +148,7 @@ int main( int argc, char** argv ){
 	}else{
 		waitpid(clientProc, &complete,0);
 	}
+	*/
 	
 	
 	
@@ -123,7 +158,7 @@ int main( int argc, char** argv ){
 	// ./WTF versionhistory
 	// ./WTF currentversion
 	
-	
+	/*
 	//client2: ./WTF destroy testproj
 	clientProc=fork();
 	if(clientProc==0){
@@ -133,6 +168,7 @@ int main( int argc, char** argv ){
 	}else{
 		waitpid(clientProc, &complete,0);
 	}
+	*/
 	
 	
 	kill(serverProc, SIGINT);

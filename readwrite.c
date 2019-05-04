@@ -51,7 +51,7 @@ void copydir(char* srcPath, char*destPath){
 char* readFileData(char* filePath){
 	int fileFD = open(filePath, O_RDONLY);
 	if(fileFD < 0 ){
-		printf("Error: %s does not exist\n"); return NULL;
+		printf("Error: %s does not exist\n", filePath); return NULL;
 	}
 	char c[1];
 	char* data = NULL;

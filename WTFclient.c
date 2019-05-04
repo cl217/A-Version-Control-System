@@ -829,21 +829,22 @@ void wtfhistory( char* projectname ){
 		exitHandler();
 	}
 	char * projectpath = getPath(".",projectname);
-	char * historyPath = getPath(projectpath, ".History");
-
-	while (dataList != NULL) {
-		//printf("hpath: %s\nname: %s\n\n",historyPath,dataList->name);
-		if (strcmp(dataList->name,historyPath) == 0 ) {
-
-			printf("History:\n%s\n", dataList->content);
-			exitHandler();
-		}
-		dataList = dataList->next;
-	}
+	char * historyPath = getPath(projectpath, HISTORY);
+	
+	printf("History:\n%s\n", dataList->FIRSTFILENODE->content);
 
 }
 
 //	4.1
+
+/*
+	Find the version tar file in ./projectname/archive
+	Use system("tar xvzf <thetarfile>") to extract tar
+	Will be extracted to .projectname directory
+	Delete current projectname directory
+	Use copydir() to rename .projectname to projectname
+
+*/
 void wtfrollback( char* projectname, char* version ){
 	wtfconnect(); //shuts down program if cant connect
 

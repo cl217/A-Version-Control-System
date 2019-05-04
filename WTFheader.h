@@ -28,10 +28,12 @@
 #define MANIFEST ".manifest"
 #define UPDATE ".update"
 #define COMMIT ".commit"
+#define ARCHIVE ".archive"
+#define HISTORY ".history"
+
 #define PROJECTNAME next->next->name
 #define NUMFILENODE next->next->next
 #define FIRSTFILENODE next->next->next->next
-#define ARCHIVE ".version"
 
 
 
@@ -120,6 +122,7 @@ void serverCurrentVersion( char *, int);
 void serverHistory(struct node *, int);
 void serverRollback(struct node *, int);
 
+void writeHistory(struct manifestNode*, int, char*);
 
 
 /** wtfclient.c **/
