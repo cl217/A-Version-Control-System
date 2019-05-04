@@ -1,5 +1,9 @@
 WTF
 WTFserver
+server/
+client1/
+client2/
+
 .nfs*
 
 # Prerequisites
