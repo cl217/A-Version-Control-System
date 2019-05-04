@@ -12,8 +12,9 @@
 	**3.8 add -done
 	3.9 remove -done
 	3.10 currentversion -done
+	3.11 history- done
 	
-	3.11 history
+	
 	3.12 rollback
 	
 */
@@ -546,8 +547,11 @@ void wtfupgrade( char* projectname ){
 	}
 	//Errorcheck- empty .update file
 	struct stat updateStat;
-	if(stat(getPath(projectPath, UPDATE), &updateStat) > 0 && updateStat.st_size == 0){
-		printf("Project up to date\n"); exitHandler();
+	stat(getPath(projectPath, UPDATE), &updateStat);
+	if(updateStat.st_size == 0){
+		printf("Status: Project already up to date\n"); 
+		remove(getPath(projectPath, UPDATE)); 
+		exitHandler();
 	}
 
 	wtfconnect(); //connects, shuts down if can't
@@ -628,8 +632,8 @@ void wtfupgrade( char* projectname ){
 		mList = mList->next;
 	}
 
-	printf("Status: upgrade successful\n");
 	remove(getPath(projectPath, UPDATE)); //removes .update
+	printf("Status: upgrade successful\n");
 }
 
 /**
@@ -708,6 +712,8 @@ void wtfcommit( char* projectname ){
 	}
 	//send commit to server
 	sendData(sockfd, versionData("commit", projectname, commitPath));
+	printf("client712: commit sent to server\n");
+	
 	printf("commit successfully saved\n");
 }
 
@@ -793,28 +799,18 @@ void wtfcurrentversion( char* projectname ){
 		exitHandler();
 	}
 
-	while (data!=NULL) {
-		if (strcmp(data->name,manPath) == 0) {
-			struct manifestNode * manList = parseManifest(data->content);
-			struct manifestNode * ptr = manList->next;
-			char * versionInfo = "";
+	struct manifestNode * manList = parseManifest(data->FIRSTFILENODE->content);
+	struct manifestNode * ptr = manList->next;
+			
+	printf("Current Version: %d\n", manList->version);
 
-			while (ptr!=NULL) {
-				char * file = append("File: ",ptr->path);
-				char * version = append(" Version: ", int2str(ptr->version));
-				char * line = append(file,version);
-				line  = appendChar(line, '\n');
-				versionInfo = append(line,versionInfo);
-				ptr = ptr->next;
-			}
-			//print curr version info
-			printf("Current Version:\n%s\n",versionInfo);
-			break;
-		}
-		data = data->next;
+	while (ptr!=NULL) {
+		char * file = append("File: ",ptr->path);
+		char * version = append("\tVersion: ", int2str(ptr->version));
+		char * line = append(file,version);
+		printf("%s\n", line);
+		ptr = ptr->next;
 	}
-
-
 }
 
 //	4.1

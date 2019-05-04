@@ -270,14 +270,14 @@ void serverCheckout(char* projectname, int sockfd) {
 }
 
 void serverCommit(struct node* dataList, int sockfd){
-
+	printf("server273\n");
 	char* projectPath = getPath(".", dataList->PROJECTNAME);
 
 	//sends manifest, fails if project or manifest not found
 	if(serverSendManifest(dataList, sockfd)==0){
 		return;
 	}
-
+	printf("server280\n");
 	dataList = receiveData(sockfd); //gets the new commit data
 	//count num of active commits in .commit folder
 	char* commitFolderPath = getPath(projectPath, COMMIT);
@@ -290,12 +290,13 @@ void serverCommit(struct node* dataList, int sockfd){
 		}
 	}
 	closedir(dir);
-
+	printf("server293\n");
 	//create a new commit in .commit folder
 	int commitFD = createFile(getPath(commitFolderPath, int2str(countFiles)));
 	char* writeout = dataList->FIRSTFILENODE->content;
 	write(commitFD, writeout, strlen(writeout));
 	close(commitFD);
+	printf("server299\n");
 }
 
 void writeHistory(struct manifestNode * newCommits, int newVersion, char * projectpath) {
@@ -538,12 +539,12 @@ void serverUpgrade(struct node* dataList, int sockfd){
 		sendData(sockfd, makeMsg("upgrade", "Error", "Project not on server"));
 		return;
 	}
-
+	printf("server542\n");
 	//read in .update sent from server
 	struct manifestNode* uList = parseManifest(dataList->FIRSTFILENODE->content);
 	char* data = NULL; int count = 0;
 	uList = uList->next;
-
+	printf("server547\n");
 	//makes data to be sent of all files to be added/updated
 	while( uList != NULL ){
 		//printf("path: %s\n", uList->path);
@@ -553,7 +554,9 @@ void serverUpgrade(struct node* dataList, int sockfd){
 		}
 		uList = uList->next;
 	}
+	printf("server557\n");
 	//Sends the data to client
 	data = appendData(dataHeader("upgrade", "ProjectFileContent", dataList->PROJECTNAME, count), data);
 	sendData(sockfd, data);
+	printf("server562\n");
 }

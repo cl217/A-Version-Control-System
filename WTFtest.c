@@ -1,6 +1,6 @@
 #include "WTFheader.h"
 
-#define PORT "4000"
+#define PORT "12949"
 #define IP "127.0.0.1"
 
 pid_t serverProc;
@@ -8,170 +8,116 @@ void exitSignalHandler( int sig_num ){
 	kill(serverProc, SIGINT);
 }
 
+void execWTF(char* folder, char* args[]){
+	int complete;
+	pid_t clientProc=fork();
+	if(clientProc==0){
+		chdir(folder);
+		execv("./WTF", args);
+	}else{
+		waitpid(clientProc, &complete,0);
+	}
+}
+
+void execTwo(char*folder1, char*args1[], char*folder2, char*args2[]){
+	int complete;
+	pid_t clientProc=fork();
+	if(clientProc==0){
+		chdir(folder1);
+		execv("./WTF", args1);
+		chdir(folder2);
+		execv("./WTF", args2);
+		
+	}else{
+		waitpid(clientProc, &complete,0);
+	}
+}
+
+
+
 int main( int argc, char** argv ){
 
 	signal(SIGINT, exitSignalHandler);	
 	
-	int complete;
 	
+	
+	//Connection setup
 	printf("\nserver: ./WTFserver <PORT>\n");
 	serverProc = fork();
 	if(serverProc==0){
 		chdir("./server");
-		char* arr[] = {"./WTFserver", PORT, NULL};
-		execv("./WTFserver", arr);
+		execv("./WTFserver", (char*[]) {"./WTFserver", PORT, NULL} );
 	}
-	
 	
 	printf("\nclient1: ./WTF configure <IP> <PORT>\n");
-	pid_t clientProc=fork();
-	if(clientProc==0){
-		chdir("./client1");
-		char* arr[] = {"./WTF", "configure", IP, PORT, NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
+	execWTF("./client1", (char*[]) {"./WTF", "configure", IP, PORT, NULL} );
 	
 	printf("\nclient2: ./WTF configure <IP> <PORT>\n");
-	clientProc=fork();
-	if(clientProc==0){
-		chdir("./client2");
-		char* arr[] = {"./WTF", "configure", IP, PORT, NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
-
+	execWTF("./client2", (char*[]) {"./WTF", "configure", IP, PORT, NULL} );
 	
+	
+	
+	
+	//Project setup
 	printf("\nclient1: ./WTF create testproj\n");
-	clientProc=fork();
-	if(clientProc==0){
-		chdir("./client1");
-		char* arr[] = {"./WTF", "create", "testproj", NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
+	execWTF("./client1", (char*[]) {"./WTF", "create", "testproj", NULL} );		
 
 	printf("\nclient2: ./WTF checkout testproj\n");
-	clientProc=fork();
-	if(clientProc==0){
-		chdir("./client2");
-		char* arr[] = {"./WTF", "checkout", "testproj", NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
+	execWTF("./client2", (char*[]) {"./WTF", "checkout", "testproj", NULL} );
 	
 	
+	
+	//Client1: adding, commiting, pushing file1	
 	printf("\nclient1: ./WTF add testproj <filepath>\n");
-	clientProc=fork();
-	if(clientProc==0){
-		chdir("./client1");
-		char* arr[] = {"./WTF", "add", "testproj", "folder1/file1.txt", NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
-	
+	execWTF("./client1", (char*[]) {"./WTF", "add", "testproj", "folder1/file1.txt", NULL} );
+		
 	printf("\nclient1: ./WTF commit testproj\n");
-	clientProc=fork();
-	if(clientProc==0){
-		chdir("./client1");
-		char* arr[] = {"./WTF", "commit", "testproj", NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
+	execWTF("./client1", (char*[]) {"./WTF", "commit", "testproj", NULL} );
 	
 	printf("\nclient1: ./WTF push testproj\n");
-	clientProc=fork();
-	if(clientProc==0){
-		chdir("./client1");
-		char* arr[] = {"./WTF", "push", "testproj", NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
+	execWTF("./client1", (char*[]) {"./WTF", "push", "testproj", NULL} );	
 	
 	
-	
-	
-	printf("\nclient1: ./WTF add testproj <filepath>\n");
-	clientProc=fork();
-	if(clientProc==0){
-		chdir("./client1");
-		char* arr[] = {"./WTF", "add", "testproj", "folder1/file2.c", NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
-	
-	printf("\nclient1: ./WTF commit testproj\n");
-	clientProc=fork();
-	if(clientProc==0){
-		chdir("./client1");
-		char* arr[] = {"./WTF", "commit", "testproj", NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
-	
-	printf("\nclient1: ./WTF push testproj\n");
-	clientProc=fork();
-	if(clientProc==0){
-		chdir("./client1");
-		char* arr[] = {"./WTF", "push", "testproj", NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
-	
-	/*
+	//Client2: update and upgrade
 	printf("\nclient2: ./WTF update testproj\n");
-	clientProc=fork();
-	if(clientProc==0){
-		chdir("./client2");
-		char* arr[] = {"./WTF", "update", "testproj", NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
+	execWTF("./client2", (char*[]) {"./WTF", "update", "testproj", NULL} );	
 	
 	printf("\nclient2: ./WTF upgrade testproj\n");
-	clientProc=fork();
-	if(clientProc==0){
-		chdir("./client2");
-		char* arr[] = {"./WTF", "upgrade", "testproj", NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
-	*/
+	execWTF("./client2", (char*[]) {"./WTF", "upgrade", "testproj", NULL} );
 	
 	
+	//Client2: remove file1
+	printf("\nclient2: ./WTF remove testproj folder1/file1.txt");
+	execWTF("./client2", (char*[]) {"./WTF", "remove", "testproj", "folder1/file1.txt", NULL} );
 	
-	//TODO: 
-	// ./WTF remove
-	// ./WTF rollback
-	// ./WTF versionhistory
-	// ./WTF currentversion
+	
+	//Client1: update and upgrade
+	printf("\nclient1: ./WTF update testproj\n");
+	execWTF("./client1", (char*[]) {"./WTF", "update", "testproj", NULL} );	
+	
+	printf("\nclient1: ./WTF upgrade testproj\n");
+	execWTF("./client1", (char*[]) {"./WTF", "upgrade", "testproj", NULL} );
+	
+	
+	//Client1: history
+	printf("\nclient1: ./WTF history testproj\n");
+	execWTF("./client1", (char*[]) {"./WTF", "history", "testproj", NULL} );
 	
 	/*
-	//client2: ./WTF destroy testproj
-	clientProc=fork();
-	if(clientProc==0){
-		chdir("./client2");
-		char* arr[] = {"./WTF", "destroy", "testproj", NULL};
-		execv("./WTF", arr);
-	}else{
-		waitpid(clientProc, &complete,0);
-	}
+	//Client1: rollback to version 2 (with the file1.txt)
+	printf("\nclient1: ./WTF rollback testproj 2\n");
+	execWTF("./client1", (char*[]) {"./WTF", "rollback", "testproj", "2", NULL} );
 	*/
 	
+	//Client1: currentversion
+	printf("\nclient1: ./WTF currentversion testproj\n");
+	execWTF("./client1", (char*[]) {"./WTF", "currentversion", "testproj", NULL} );
+
+
+	//Client2: destroy 		
+	printf("client2: ./WTF destroy testproj\n");
+	execWTF("./client2", (char*[]) {"./WTF", "destroy", "testproj", NULL} );
 	
 	kill(serverProc, SIGINT);
     	return 0;	
-	
 }

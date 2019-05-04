@@ -12,6 +12,26 @@ struct mutexNode* getMutex( char* projectname, struct mutexNode* mutexList ){
 	return NULL; //should never happen
 }
 
+/*
+int dirIsEmpty(char* folderPath){
+	DIR * dir = opendir(folderPath);
+	struct dirent * entry;
+	if(dir == NULL){
+		return;
+	}
+	int count = 0;
+	while( (entry=readdir(dir)) != NULL ){ //loop everything in directory
+		if( entry->d_type==DT_DIR || entry->d_type == DT_REG){ //is file or folder
+			count++;
+			if(count>2){
+				return 0;
+			}
+		}
+	}
+	return 1;
+}
+*/
+
 //To send Error or success msg
 char* makeMsg(char* command, char* signal, char* msg){
 	char* str = appendData(command, signal);
