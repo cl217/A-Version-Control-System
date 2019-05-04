@@ -195,7 +195,7 @@ int createFile(char* filePath){
 	//printf("filePath: %s\n", filePath);
 	int fileFD = open(filePath, O_CREAT|O_WRONLY|O_TRUNC, 0666);
 	if( fileFD < 0 ){
-		printf("error creating file\n"); return 0;
+		printf("error creating file %s\n", filePath); return 0;
 	}
 	return fileFD;
 }

@@ -87,8 +87,6 @@ int compareVersion( char*, char*, struct manifestNode* );
 int neg(int);
 struct manifestNode* findFile(char*, struct manifestNode*);
 char* makeMsg(char*, char*, char*);
-void compressDir(char*, char*);
-void decompressDir(char*, char*);
 
 
 /** communicate.c **/
@@ -99,6 +97,9 @@ int receiveConfirmation(int);
 struct node* splitData(char*);
 void sendCommandProject( int, char*, char*);
 
+void compressProject(char* projectname, char* outFilePath);
+void getAllFiles(char* inDirPath);
+void decompressDir(char* inFilePath, char* outDirPath);
 
 /** readwrite.c **/
 void copydir(char*, char*);
@@ -111,10 +112,6 @@ void writeToUpdate(int, char*, struct manifestNode*);
 char* versionData( char*, char*, char*);
 char* dataHeader( char* command, char* type, char* projectname, int numFile );
 void destroyRecursive(char*);
-
-void compressProject(char* projectname, char* outFilePath);
-void getAllFiles(char* inDirPath);
-void decompressDir(char* inFilePath, char* outDirPath);
 
 
 /** wtfserver.c **/

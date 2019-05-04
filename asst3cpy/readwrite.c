@@ -1,7 +1,5 @@
 #include "WTFheader.h"
 
-
-
 char* allFileData;
 int fileCount = 0;
 void compressProject(char* projectname, char* outFilePath){
@@ -10,9 +8,14 @@ void compressProject(char* projectname, char* outFilePath){
 
 	getAllFiles(getPath(".", projectname));
 	
+	//printf("fileCount: %d\n", fileCount);
+	
 	allFileData = appendData( dataHeader("compress", "ProjectFileContent", projectname, fileCount), allFileData);
 
 	int dataLen = strlen(allFileData);
+	
+	//printf("rw18\n");
+	//printf("%s\n", allFileData);
 	
 	int fd = createFile(outFilePath);
 	close(fd);
@@ -20,6 +23,7 @@ void compressProject(char* projectname, char* outFilePath){
 	gzwrite(fi, (void*)allFileData, dataLen);
 	gzclose(fi);
 	
+	//printf("rw45\n");
 }
 
 //use zlib to compress entire directory to a single file
@@ -61,6 +65,7 @@ void decompressDir(char* inFilePath, char* outDirPath){
 	
 	//write out all the files
 	struct node* fileList = splitData(decompressed);
+	printf("rw70\n");
 	
 	struct node* ptr = fileList->FIRSTFILENODE;
 	while(ptr!=NULL){
@@ -68,13 +73,19 @@ void decompressDir(char* inFilePath, char* outDirPath){
 		char* cpyPath = (char*)malloc((strlen(ptr->name)+1)*sizeof(char));
 		memcpy(cpyPath, &(ptr->name[2]), strlen(ptr->name)-2+1); //copies \0
 		cpyPath = getPath(outDirPath, cpyPath);
+			
+		printf("cpyPath: %s\n", cpyPath);
 		
 		int fd = open( cpyPath, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 		if( fd<0 ){ //can't open, have to create dirs then retry
+			printf("rw 84\n");
 			char* tempPath = (char*)malloc((strlen(cpyPath)+1)*sizeof(char));
 			strcpy(tempPath, cpyPath);
 			createSubdir(tempPath);
 			fd = open( cpyPath, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+			if( fd < 0 ){
+				printf("something is wrong\n");
+			}
 		}
 		if( ptr->content != NULL ){
 			write(fd, ptr->content, strlen(ptr->content));
@@ -83,6 +94,7 @@ void decompressDir(char* inFilePath, char* outDirPath){
 		ptr = ptr->next;
 	}
 }
+
 
 
 void destroyRecursive(char* path) {
