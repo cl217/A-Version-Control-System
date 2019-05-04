@@ -19,6 +19,7 @@
 #include <libgen.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include "zlib.h"
 
 /*
 #include <arpa/inet.h>
