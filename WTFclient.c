@@ -6,16 +6,16 @@
 	**3.2 update -done
 	**3.3 upgrade -done
 	**3.4 commit -done
-	**3.5 push TODO: LOCK
+	**3.5 push -done
 	**3.6 create -done
-	3.7 destroy TODO: LOCK
+	3.7 destroy  -done
 	**3.8 add -done
-
-
-	3.9 remove
-	3.10 currentversion
+	3.9 remove -done
+	3.10 currentversion -done
+	
 	3.11 history
 	3.12 rollback
+	
 */
 
 
