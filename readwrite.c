@@ -52,7 +52,7 @@ void getAllFiles(char* inDirPath){
 
 
 void decompressDir(char* inFilePath, char* outDirPath){
-	
+	printf("rw 55\n");
 	char buf[5000000];
 	
 	gzFile fi = (gzFile)gzopen(inFilePath, "rb");
@@ -72,7 +72,6 @@ void decompressDir(char* inFilePath, char* outDirPath){
 	
 	struct node* ptr = fileList->FIRSTFILENODE;
 	while(ptr!=NULL){
-	
 		char* cpyPath = (char*)malloc((strlen(ptr->name)+1)*sizeof(char));
 		memcpy(cpyPath, &(ptr->name[2]), strlen(ptr->name)-2+1); //copies \0
 		cpyPath = getPath(outDirPath, cpyPath);

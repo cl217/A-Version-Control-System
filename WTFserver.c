@@ -154,17 +154,9 @@ void executeCommand(struct node* dataList, int sockfd){
 }
 
 void serverRollback(struct node * dataList, int sockfd) {
-	char * projectname = dataList->PROJECTNAME;
-	struct node * ptr = dataList;
-	char * versionAndProject = NULL;
 
 	//find version and project info
-	while (ptr!=NULL) {
-		if (strcmp(ptr->nodeType,"project") == 0) {
-			versionAndProject = ptr->name;
-		}
-		ptr=ptr->next;
-	}
+	char * versionAndProject = dataList->PROJECTNAME;
 
 	//break version and project into 2 strings
 	char * pname = NULL; //project name
@@ -201,12 +193,12 @@ void serverRollback(struct node * dataList, int sockfd) {
 	destroyRecursive(getPath(".",pname));
 
 	//decompress file to new project file
-	decompressDir(versionPath, getPath(".", pname));
+	decompressDir(versionPath, ".");
 
 
-	//TODO - Remove all files in .archive ahead of the rollback version	
+	//TODO - Remove all files in .archive >= of the rollback version	
 
-	//TODO - delete files not in manifest, write history
+	//TODO - write history
 
 }
 
