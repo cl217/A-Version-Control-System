@@ -185,6 +185,34 @@ void serverRollback(struct node * dataList, int sockfd) {
 	version = token; //version
 	printf("p: %s\nv: %s\n",pname,version);
 
+	char * versionFolder = getPath(".",pname);
+	versionFolder = getPath(versionFolder,".archive");
+	char * versionPath = getPath(versionFolder,version);
+	versionPath = append(versionPath,".tar.gz");
+	printf("vpath: %s\n",versionPath);
+
+	//hold original history
+	char * hpath = getPath(".",pname);
+	hpath = getPath(pname, HISTORY);
+	char * history = readFileData(hpath);
+	//struct manifestNode* histList =  parseManifest(history);
+
+	//de tar file
+	char* syscmd = append("tar -xzvf ", versionPath);
+	syscmd = append(syscmd," ");
+	system(syscmd);
+
+	//destory original dir
+	destroyRecursive(getPath(".",pname));
+
+	//move archive to original
+	char * moveDir = append("mv ./.", pname);
+	moveDir = append(moveDir, " ./");
+	moveDir = append(moveDir, pname);
+	system(moveDir);
+	return;
+
+	//TODO - delete files not in manifest, write history
 
 }
 
@@ -309,7 +337,7 @@ void writeHistory(struct manifestNode * newCommits, int newVersion, char * proje
 	write(historyFD, versionNum, strlen(versionNum));
 	close(historyFD);
 	printf("server311\n");
-	
+
 	struct manifestNode * ptr = newCommits->next;
 	while (ptr!=NULL) {
 		writeToVersionFile(historyPath, ptr->code, ptr->version, ptr->path, ptr->hash);
@@ -373,10 +401,10 @@ void serverPush(struct node* dataList, int sockfd){
 	*/
 
 	printf("server374\n");
-	char* tarPath = getPath(projectPath, 
+	char* tarPath = getPath(projectPath,
 				getPath(ARCHIVE, append(int2str(versionNum), ".tar.gz")));
 	printf("tarpath: %s\n", tarPath);
-	
+
 	//copy project to temporary ./.projectname on server
 	char* tempPath = getPath(".", append(".", dataList->PROJECTNAME));
 	createDir(tempPath);
@@ -385,14 +413,14 @@ void serverPush(struct node* dataList, int sockfd){
 	//make tar of file in .version
 	char* syscmd = append("tar -czvf ", tarPath);
 	syscmd = append(syscmd, " ");
-	syscmd = append(syscmd, append(".", dataList->PROJECTNAME));	
+	syscmd = append(syscmd, append(".", dataList->PROJECTNAME));
 	system(syscmd);
-	
+
 	//delete temporary project copy
 	destroyRecursive(tempPath);
 
 	printf("server391\n");
-	
+
 	//remove all deleted commits from list of commits
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
 	struct manifestNode* cPtr = cList->next;
@@ -449,8 +477,8 @@ void serverPush(struct node* dataList, int sockfd){
 		ptr=ptr->next;
 	}
 
-	printf("server449\n");	
-	
+	printf("server449\n");
+
 	int newVersion = (mList->version)+1;
 	newVersionFile( newVersion , manPath);
 	mList = mList->next;
@@ -461,8 +489,8 @@ void serverPush(struct node* dataList, int sockfd){
 		mList = mList->next;
 	}
 	printf("server459\n");
-	
-	
+
+
 
 	writeHistory(cList, newVersion ,projectPath);
 

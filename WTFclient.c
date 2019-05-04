@@ -12,11 +12,11 @@
 	**3.8 add -done
 	3.9 remove -done
 	3.10 currentversion -done
-	3.11 history- done
-	
-	
+	3.11 history- done //TODO: Rollback needs to write to history
+
+
 	3.12 rollback
-	
+
 */
 
 
@@ -549,8 +549,8 @@ void wtfupgrade( char* projectname ){
 	struct stat updateStat;
 	stat(getPath(projectPath, UPDATE), &updateStat);
 	if(updateStat.st_size == 0){
-		printf("Status: Project already up to date\n"); 
-		remove(getPath(projectPath, UPDATE)); 
+		printf("Status: Project already up to date\n");
+		remove(getPath(projectPath, UPDATE));
 		exitHandler();
 	}
 
@@ -713,7 +713,7 @@ void wtfcommit( char* projectname ){
 	//send commit to server
 	sendData(sockfd, versionData("commit", projectname, commitPath));
 	printf("client712: commit sent to server\n");
-	
+
 	printf("commit successfully saved\n");
 }
 
@@ -801,7 +801,7 @@ void wtfcurrentversion( char* projectname ){
 
 	struct manifestNode * manList = parseManifest(data->FIRSTFILENODE->content);
 	struct manifestNode * ptr = manList->next;
-			
+
 	printf("Current Version: %d\n", manList->version);
 
 	while (ptr!=NULL) {
@@ -826,7 +826,7 @@ void wtfhistory( char* projectname ){
 	}
 	char * projectpath = getPath(".",projectname);
 	char * historyPath = getPath(projectpath, HISTORY);
-	
+
 	printf("History:\n%s\n", dataList->FIRSTFILENODE->content);
 
 }
@@ -855,6 +855,9 @@ void wtfrollback( char* projectname, char* version ){
 		printf("Error: %s\n", dataList->next->content);
 		exitHandler();
 	}
-	//sendData(sockfd,version);
+
+	//destory local project and checkout servers up to date version
+	destroyRecursive(getPath(".",projectname));
+	wtfcheckout(projectname);
 
 }
