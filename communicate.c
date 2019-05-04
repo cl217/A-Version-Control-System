@@ -8,7 +8,7 @@ int sendData( int fd, char* data ){
 	int size = strlen(data);
 	write(fd, &size, sizeof(int)); //send size of data
 	int code = receiveConfirmation(fd); //get confirmation
-	
+
 	if(code != 0 ){
 		write(fd, data, size); //send data
 		receiveConfirmation(fd); //get confirmation
@@ -17,21 +17,21 @@ int sendData( int fd, char* data ){
 }
 
 struct node* receiveData( int fd ){
-	
+
 	//receive data size
 	int dataSize;
 	read(fd, &dataSize, sizeof(int));
 	sendConfirmation(fd, 1);
-	
+
 	//receive data
 	char data[dataSize+1];
 	read(fd, &data, dataSize);
 	data[dataSize]='\0';
 	sendConfirmation(fd, 1);
-	
+
 	//TODO: EC- decompress data and pass into splitData
-	
-	return splitData(data);	
+
+	return splitData(data);
 }
 
 void sendConfirmation(int fd, int code){ //1-success, 0-failure
@@ -46,12 +46,12 @@ int receiveConfirmation( int fd ){
 }
 
 struct node* splitData(char* data){
-	
+
 	struct node* dataList = NULL;
 	struct node* endPtr = NULL;
-	
+
 	int i = 0;
-	
+
 	//READ IN COMMAND NODE
 	char * token = NULL;
 	while(data[i]!='\t'){
@@ -65,7 +65,7 @@ struct node* splitData(char* data){
 	strcpy(addThis->name, token);
 	dataList = addThis; endPtr=addThis;
 	//printf("command: %s\n", token);
-		
+
 	//READ IN DATA TYPE NODE
 	token = NULL;
 	while(data[i]!='\t' && i < strlen(data)){
@@ -79,7 +79,7 @@ struct node* splitData(char* data){
 	strcpy(addThis->name, token);
 	endPtr->next=addThis; endPtr = addThis;
 	char* type = token;
-	
+
 	//IF Datatype is ERROR/SUCCESS SIGNAL
 	if(strcmp(token, "Error")==0 || strcmp(token, "Success")==0){
 		token = NULL;
@@ -98,7 +98,7 @@ struct node* splitData(char* data){
 		strcpy(addThis->content, token);
 		return dataList;
 	}
-	
+
 	//READ IN PROJECT NODE
 	//read in projectname Bytes
 	token = NULL;
@@ -120,9 +120,9 @@ struct node* splitData(char* data){
 	i++; //skip delimeter
 	addThis->name = (char*)malloc((strlen(token)+1)*sizeof(char));
 	strcpy(addThis->name, token);
-	endPtr->next = addThis; endPtr = addThis;	
+	endPtr->next = addThis; endPtr = addThis;
 	//printf("Projectname: %s\n", token);
-	
+
 	//if data contains files
 	if( strcmp(type, "Project") != 0 ){
 		//NUMFILE NODE
@@ -139,11 +139,11 @@ struct node* splitData(char* data){
 		addThis->name = token;
 		endPtr->next=addThis; endPtr=addThis;
 
-		//READ IN FILES		
+		//READ IN FILES
 		for( int k = 0; k < numFile; k++ ){
 			addThis = (struct node*)malloc(1*sizeof(struct node));
 			addThis->nodeType = (strstr(type, "Content")== NULL)? "fileName":"fileContent";
-			
+
 			//read in bytes of file Name
 			token = NULL;
 			while(data[i]!='\t'){
@@ -153,7 +153,7 @@ struct node* splitData(char* data){
 			i++;
 			int numByte = atoi(token);
 			//addThis->bytesName = numByte;
-			
+
 			//read in file name
 			token = NULL;
 			for( int m = 0; m < numByte; m++ ){
@@ -163,7 +163,7 @@ struct node* splitData(char* data){
 			i++; //skip delimeter
 			addThis->name = (char*)malloc((strlen(token)+1)*sizeof(char));
 			strcpy(addThis->name, token);
-			
+
 			//if data contains file content
 			if( strstr(type,"Content") != NULL ){
 				//printf("286\n");
@@ -177,7 +177,7 @@ struct node* splitData(char* data){
 				numByte = atoi(token);
 				//addThis->bytesContent = numByte;
 				//printf("numByte: %d\n", addThis->bytesContent);
-				
+
 				//read in file content
 				if( numByte == 0 ){
 					addThis->content = NULL;
@@ -205,5 +205,5 @@ void sendCommandProject( int sockfd, char* command, char* projectname ){
 	data = appendData(data, int2str(strlen(projectname))); //bytesPname
 	data = appendData(data, projectname); //projectName
 	//printf("Sending to server: %s\n", data);
-	sendData(sockfd, data);	
+	sendData(sockfd, data);
 }

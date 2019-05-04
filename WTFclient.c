@@ -46,7 +46,7 @@ int main( int argc, char** argv ){
 	if( argc < 2 ){
 		printf("invalid args\n"); return 0;
 	}
-	
+
 	//  ./WTF randomargv2 for client-server connection test
 	if(strcmp(argv[1], "configure")==0){ // ./WTF configure <IP> <port>
 		if(argc != 4){
@@ -818,7 +818,46 @@ void wtfcurrentversion( char* projectname ){
 }
 
 //	4.1
-void wtfhistory( char* history ){}
+void wtfhistory( char* projectname ){
+	wtfconnect(); //shuts down program if cant connect
+
+	sendCommandProject(sockfd, "history", projectname);
+	struct node* dataList = receiveData(sockfd);
+
+	if( strcmp(dataList->next->name, "Error")==0 ){
+		printf("Error: %s\n", dataList->next->content);
+		exitHandler();
+	}
+	char * projectpath = getPath(".",projectname);
+	char * historyPath = getPath(projectpath, ".History");
+
+	while (dataList != NULL) {
+		//printf("hpath: %s\nname: %s\n\n",historyPath,dataList->name);
+		if (strcmp(dataList->name,historyPath) == 0 ) {
+
+			printf("History:\n%s\n", dataList->content);
+			exitHandler();
+		}
+		dataList = dataList->next;
+	}
+
+}
 
 //	4.1
-void wtfrollback( char* projectname, char* version ){}
+void wtfrollback( char* projectname, char* version ){
+	wtfconnect(); //shuts down program if cant connect
+
+	char * projectData = appendData(projectname,version); //append version to projectdata
+
+	//send rollback command
+	sendCommandProject(sockfd, "rollback", projectData); //1
+
+	struct node* dataList = receiveData(sockfd); //2
+
+	if( strcmp(dataList->next->name, "Error")==0 ){
+		printf("Error: %s\n", dataList->next->content);
+		exitHandler();
+	}
+	//sendData(sockfd,version);
+
+}

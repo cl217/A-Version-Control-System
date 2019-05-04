@@ -180,7 +180,7 @@ char* writeToVersionFile(char* versionPath, char* code, int curVersion, char*pat
 void newVersionFile(int newVersion, char* filePath){
 	int fileFD = open(filePath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
 	if(fileFD<0){
-		printf("error: creating file\n");return;
+		printf("error2: creating file\n");return;
 	}
 	char * versionStr = int2str(newVersion);
 	write(fileFD, versionStr, strlen(versionStr));

@@ -10,7 +10,7 @@
 	pthread_mutex_t mutex; //type
 	int pthread_mutex_lock( pthread_mutex_t *mutex ); //lock function
 	int pthread_mutex_unlock( pthread_mutex_t *mutex ); //unlock function
-	
+
 */
 
 
@@ -26,7 +26,7 @@ void exitSignalHandler( int sig_num ){
 		}else{
 			//TODO: should probably identify the client
 			printf("Server: A client has been disconnected\n");
-		}	
+		}
 		pthread_cancel(threadList->thread);
 		threadList = threadList->next;
 	}
@@ -37,18 +37,18 @@ void exitSignalHandler( int sig_num ){
 void *threadHandler(void *fd_pointer){
 	int sockfd = *(int*)fd_pointer;
 	struct node* dataList = receiveData(sockfd);
-	
+
 	//testing
 	struct mutexNode* ptr = mutexList;
 	while( ptr != NULL ){
 		printf("mutex: %s\n", ptr->projectname);
-		ptr=ptr->next;	
+		ptr=ptr->next;
 	}
-	
+
 	executeCommand(dataList, sockfd);
-	
+
 	threadList = threadList->next; //remove finished thread from list
-	
+
 	//Command has been executed here
 	close(sockfd); //close client connection
 	printf("Server: Client disconnected\n");
@@ -80,8 +80,8 @@ int main( int argc, char** argv ){
 	serverThread->sockfd = sockfd;
 	serverThread->name = "server";
 	threadList = serverThread;
-	
-	
+
+
 	struct sockaddr_in serverAddress;
 	serverAddress.sin_family = AF_INET;
 	serverAddress.sin_addr.s_addr = INADDR_ANY;
@@ -90,16 +90,16 @@ int main( int argc, char** argv ){
 	if( bind(sockfd,(struct sockaddr*) &serverAddress, sizeof(serverAddress)) < 0 ){
 		printf("Error: can't bind.\n"); return 1;
 	}
-	
+
 	printf("Server: running...\n");
-	
+
 	//Sets up mutex for each project in server
 	DIR* dir = opendir(".");
 	struct dirent* entry;
 	while((entry=readdir(dir)) != NULL ){
-		if(entry->d_type == DT_DIR 
+		if(entry->d_type == DT_DIR
 			&& strcmp(entry->d_name, ".")!=0 && strcmp(entry->d_name, "..")!=0){
-			//Do stuff	
+			//Do stuff
 			struct mutexNode* addThis
 						 = (struct mutexNode*) malloc(sizeof(struct mutexNode));
 			addThis->projectname = entry->d_name;
@@ -109,7 +109,7 @@ int main( int argc, char** argv ){
 		}
 	}
 	closedir(dir);
-	
+
 
 	listen(sockfd, 20);
 	struct sockaddr_in clientAddress;
@@ -123,28 +123,28 @@ int main( int argc, char** argv ){
 			printf("Error: Client connection failed.\n"); continue;
 		}
 		printf("Server: New client connected.\n");
-		
+
 		//new thread for new client
 		int* newsockfdptr;
 		newsockfdptr = malloc(sizeof(int));
 		*newsockfdptr = connectionfd;
-		
-		struct threadNode* currentThread = 
+
+		struct threadNode* currentThread =
 					(struct threadNode*)malloc(sizeof(struct threadNode));
 		currentThread->sockfd = connectionfd;
 		currentThread->next = threadList;
 		currentThread->name = "client";
 		threadList = currentThread;
-		
+
 		pthread_create(&(currentThread->thread), NULL, threadHandler, (void*) newsockfdptr);
-		
+
 	}
-	
+
 	return 0;
 }
 
 void executeCommand(struct node* dataList, int sockfd){
-	
+
 	struct mutexNode* currentMutex = NULL; //FIND MUTEX FOR THE PROJECT
 
 	char* command = dataList->name;
@@ -166,45 +166,99 @@ void executeCommand(struct node* dataList, int sockfd){
 	}else if(strcmp(command, "currentversion")==0){
 		serverSendManifest(dataList, sockfd);
 	}else if(strcmp(command, "history")==0){
-
+		serverHistory(dataList, sockfd);
 	}else if(strcmp(command, "rollback")==0){
-
+		serverRollback(dataList,sockfd);
 	}else{
 		//should never happen
 	}
 }
 
+void serverRollback(struct node * dataList, int sockfd) {
+	char * projectname = dataList->PROJECTNAME;
+	struct node * ptr = dataList;
+	char * versionAndProject = NULL;
+
+	//find version and project info
+	while (ptr!=NULL) {
+		if (strcmp(ptr->nodeType,"project") == 0) {
+			versionAndProject = ptr->name;
+		}
+		ptr=ptr->next;
+	}
+
+	//break version and project into 2 strings
+	char * pname = NULL; //project name
+	char * version = NULL; //desired version to roll back to
+	char * token = NULL;
+	int i = 0;
+	while(versionAndProject[i]!= '\t'){
+		token = appendChar(token,versionAndProject[i]);
+		i++;
+	}
+	pname = token; //project
+	token = NULL;
+	i++; //skip delim
+	while(i < strlen(versionAndProject)){
+		token = appendChar(token, versionAndProject[i]);
+		i++;
+	}
+	version = token; //version
+	printf("p: %s\nv: %s\n",pname,version);
+
+
+}
+
+void serverHistory(struct node * dataList, int sockfd) {
+	char * projectname = dataList->PROJECTNAME;
+	char * projectpath = getPath(".", projectname);
+	char * historyPath = getPath(projectpath, ".History");
+
+	if( dirExists(projectpath) == 0 ){
+		printf("error1\n");
+		sendData(sockfd, makeMsg(dataList->name, "Error", "Project not on server"));
+		return; //unsuccessful
+	}
+
+	//char * data = readFileData(historyPath);
+	char* data = versionData(dataList->name,projectname, historyPath);
+	//printf("sending: %s\n",data);
+
+	sendData(sockfd, data); //Sends data to client
+
+}
+
 void serverDestroy(char* projectname, int sockfd) {
-	
+
 	pthread_mutex_t mutex = getMutex(projectname, mutexList)->mutex;
-	pthread_mutex_lock(&mutex); //locks project		
-	
+	pthread_mutex_lock(&mutex); //locks project
+
 	char* projectPath = getPath(".", projectname);
 	if( dirExists(projectPath) == 0 ){
 		sendData(sockfd, makeMsg("destroy", "Error", "Project not on server"));
-		pthread_mutex_unlock(&mutex); //unlocks	
+		pthread_mutex_unlock(&mutex); //unlocks
 		return;
 	}
 
 	destroyRecursive(projectPath);
-	
+
 	//remove mutex for the project
 	struct mutexNode* ptr = mutexList;
 	struct mutexNode* prev = NULL;
 	while( ptr != NULL && strcmp(ptr->projectname, projectname)!=0 ){
 		prev = ptr;
 		ptr = ptr->next;
-	}	
+	}
 	if( prev == NULL ){ //project is first node
 		mutexList = mutexList->next;
 	}else{
 		prev->next = ptr->next;
 	}
-	
+
 	sendData(sockfd, makeMsg("destroy", "success", "Project destroyed"));
-	
-	pthread_mutex_unlock(&mutex); //unlocks	
-		
+
+	pthread_mutex_unlock(&mutex); //unlocks
+
 }
 
 void serverCheckout(char* projectname, int sockfd) {
@@ -240,7 +294,7 @@ void serverCheckout(char* projectname, int sockfd) {
 }
 
 void serverCommit(struct node* dataList, int sockfd){
-	
+
 	char* projectPath = getPath(".", dataList->PROJECTNAME);
 
 	//sends manifest, fails if project or manifest not found
@@ -268,20 +322,50 @@ void serverCommit(struct node* dataList, int sockfd){
 	close(commitFD);
 }
 
+void writeHistory(struct manifestNode * newCommits, char * projectpath, char * command) {
+	char * historyPath = getPath(projectpath, ".History");
+	printf("path: %s\n",historyPath);
+	char * action = appendChar(command,'\n');
+
+	int version = 0;
+	if (newCommits != NULL) {
+		version = newCommits->version;
+	}
+	printf("version: %i\n",version);
+
+	// int versionFD = open(historyPath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	// if(versionFD<0){
+	// 	printf("error1: opening\n"); return;
+	// }
+	// write(versionFD, action, strlen(action));
+	// write(versionFD, version,strlen(version));
+	// close(versionFD);
+	writeToVersionFile(historyPath, action, version, "","");
+
+	struct manifestNode * ptr = newCommits->next;
+
+	//printf("history:\n");
+	while (ptr!=NULL) {
+		writeToVersionFile(historyPath, ptr->code, ptr->version, ptr->path, ptr->hash);
+		ptr = ptr->next;
+	}
+
+}
+
 void serverPush(struct node* dataList, int sockfd){
-	
+
 	char* projectPath = getPath(".", dataList->PROJECTNAME);
 
 	pthread_mutex_t mutex = getMutex(dataList->PROJECTNAME, mutexList)->mutex;
-	pthread_mutex_lock(&mutex); //locks project	
+	pthread_mutex_lock(&mutex); //locks project
 
 	//Fails if project not on server
 	if( dirExists(projectPath) == 0 ){
 		sendData(sockfd, makeMsg("push", "Error", "Project not on server"));
-		pthread_mutex_unlock(&mutex); //unlocks	
+		pthread_mutex_unlock(&mutex); //unlocks
 		return;
 	}
-	
+
 	char* commitFPath = getPath(projectPath, COMMIT);
 
 	//tries to find matching commit
@@ -316,14 +400,14 @@ void serverPush(struct node* dataList, int sockfd){
 	struct manifestNode* mList = parseManifest(readFileData(manPath));
 	int versionNum = mList->version;
 
-	
-	char* copyPath = getPath(projectPath, 
+
+	char* copyPath = getPath(projectPath,
 						getPath(ARCHIVE, append(int2str(versionNum),".tar.gz")));
 	char* tempPath = getPath(".", append(dataList->PROJECTNAME,".tar.gz"));
-	
-	
+
+
 	/*
-		TODO: More EC: do this with zlib	
+		TODO: More EC: do this with zlib
 		figure out a format to separate files
 		zlib compresses into a single file
 		undo format to reconstruct files from the single compressed file
@@ -331,13 +415,13 @@ void serverPush(struct node* dataList, int sockfd){
 	char* syscmd = append("tar -czvf ", tempPath);
 	syscmd = append(syscmd, " ");
 	syscmd = append(syscmd, dataList->PROJECTNAME);
-	
+
 	//TODO: do this without using system
 	system(syscmd);
 	syscmd = append("mv ", append(append(tempPath, " "), copyPath));
 	system(syscmd);
 
-	
+
 	/*
 	//copy project to temporary ./.projectname on server
 	char* tempPath = getPath(".", append(".", dataList->PROJECTNAME));
@@ -355,6 +439,7 @@ void serverPush(struct node* dataList, int sockfd){
 	//remove all deleted commits from list of commits
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
 	struct manifestNode* cPtr = cList->next;
+	writeHistory(cList,projectPath, "PUSH");
 	while( cPtr != NULL ){
 		//remove all deleted commits from list of commits
 		if(strcmp(cPtr->code, "deleted")==0){
@@ -420,7 +505,7 @@ void serverPush(struct node* dataList, int sockfd){
 	}
 
 	sendData(sockfd, versionData("push", dataList->PROJECTNAME, manPath));
-	pthread_mutex_unlock(&mutex); //unlocks	
+	pthread_mutex_unlock(&mutex); //unlocks
 
 }
 
@@ -462,21 +547,36 @@ void serverCreate(struct node* dataList, int sockfd){
 		sendData(sockfd, makeMsg("create", "Error", "Project already exists on server"));
 		return;
 	}
-	
+
+
+
 	//adds mutex for the project dir
 	struct mutexNode* addThis
 				 = (struct mutexNode*) malloc(sizeof(struct mutexNode));
 	addThis->projectname = projectname;
 	addThis->next = mutexList;
 	mutexList = addThis;
-	
-	
+
+
 	//initializes project on server
 	createDir(projectpath);
 	createDir(getPath(projectpath, ARCHIVE));
 	createDir(getPath(projectpath, COMMIT));
 	char* manifestPath = getPath(projectpath, MANIFEST);
 	newVersionFile(1, manifestPath);
+
+	//create .History file
+	char * historyPath = getPath(projectpath, ".History");
+	printf("path: %s\n",historyPath);
+	char * action = appendChar("CREATE",'\n');
+
+	int historyFD = open(historyPath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	if(historyFD<0){
+		printf("error: opening .History in wtfcreate()\n"); return;
+	}
+	write(historyFD, action, strlen(action));
+	write(historyFD, appendChar("0",'\n'), strlen("00"));
+	close(historyFD);
 
 	//Sends initialized manifest to client
 	sendData(sockfd, versionData("create",projectname, manifestPath));
