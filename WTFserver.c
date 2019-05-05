@@ -151,11 +151,11 @@ void executeCommand(struct node* dataList, int sockfd){
 }
 
 void serverRollback(struct node * dataList, int sockfd) {
-	
+
 	//TODO: make sure the version number is valid. 1<=version<currentversion
 		//if not, send to client an error msg
-		
-		
+
+
 	//find version and project info
 	char * versionAndProject = dataList->PROJECTNAME;
 
@@ -182,13 +182,55 @@ void serverRollback(struct node * dataList, int sockfd) {
 	versionFolder = getPath(versionFolder, ARCHIVE);
 	char * versionPath = getPath(versionFolder,version);
 	versionPath = append(versionPath,".gz");
-	printf("vpath: %s\n",versionPath);
+	//printf("vpath: %s\n",versionPath);
 
 	//hold original history
 	char * hpath = getPath(".",pname);
 	hpath = getPath(pname, HISTORY);
 	char * history = readFileData(hpath);
-	//struct manifestNode* histList =  parseManifest(history);
+
+	char * appendThis = NULL;
+	i = 0;
+	int nextVersion = atoi(version);
+	nextVersion++;
+
+	char * nextVers; //get the next version to break at
+	sprintf(nextVers, "%d", nextVersion);
+	int datalen = strlen(history);
+
+	printf("nextVersion: %s\n",nextVers);
+	while (i < datalen) {
+		char * line = NULL;
+		while(history[i] != '\n') {
+			line  = appendChar(line,history[i]);	//get line
+			i++;
+		}
+		if (strcmp(line,nextVers) == 0) { //break when next version line is hit
+			break;
+		}
+		appendThis = append(appendThis,line); //append line
+		appendThis = appendChar(appendThis, '\n');//append new line
+		if (strcmp(line,version) == 0) { //start fresh when desired version is reached
+			appendThis = NULL;
+		}
+		i++;
+	}
+
+//append new data to history from old version
+	history = appendChar(history, '\n');
+	history = append(history,version);
+	history = append(history, " rollback");
+	history = appendChar(history,'\n');
+	history = append(history,appendThis);
+	char * hPath = getPath(pname,HISTORY);
+
+	//write to .history file
+	int fileFD = open(hPath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	if(fileFD<0){
+		printf("error2: creating .history file\n");return;
+	}
+	write(fileFD, history, strlen(history));
+	close(fileFD);
 
 	//destory original dir
 	destroyRecursive(getPath(".",pname));
@@ -197,11 +239,13 @@ void serverRollback(struct node * dataList, int sockfd) {
 	decompressDir(versionPath, ".");
 
 
-	//TODO - Remove all files in .archive >= of the rollback version	
+	//TODO - Remove all files in .archive >= of the rollback version
 
 	//TODO - write history
-	
-	//TODO - send to client a success msg
+
+	//send to client a success msg
+	sendData(sockfd, makeMsg("rollback", "success", "Project rolled back"));
+
 
 }
 
@@ -384,7 +428,7 @@ void serverPush(struct node* dataList, int sockfd){
 	int versionNum = mList->version;
 
 	//use zlib to compress project into .archive
-	char* archivePath = getPath(dataPath, ARCHIVE);	
+	char* archivePath = getPath(dataPath, ARCHIVE);
 	printf("archivePath: %s\n", archivePath);
 	char* compressPath = getPath(archivePath, append(int2str(versionNum),".gz"));
 	printf("server390\n");
@@ -401,7 +445,7 @@ void serverPush(struct node* dataList, int sockfd){
 		printf("cPtr->path: %s\n", cPtr->path);
 		//remove all deleted commits from list of commits
 		if(strcmp(cPtr->code, "deleted")==0){
-			
+
 			struct manifestNode* mNode = findFile(cPtr->path ,mList);
 			mNode->code = "deleted";
 			remove(cPtr->path);
@@ -463,11 +507,11 @@ void serverPush(struct node* dataList, int sockfd){
 		}
 		mList = mList->next;
 	}
-	
+
 	printf("server459\n");
 	writeHistory(cList, newVersion ,projectPath);
-	printf("server462\n");	
-	
+	printf("server462\n");
+
 	sendData(sockfd, versionData("push", dataList->PROJECTNAME, manPath));
 	pthread_mutex_unlock(&mutex); //unlocks
 
@@ -524,7 +568,7 @@ void serverCreate(struct node* dataList, int sockfd){
 	createDir(projectpath);
 	char* dataDirName = append(".", projectname);
 	createDir(getPath(".", dataDirName));
-	createDir(getPath(dataDirName, ARCHIVE)); 
+	createDir(getPath(dataDirName, ARCHIVE));
 	createDir(getPath(projectpath, COMMIT));
 	char* manifestPath = getPath(projectpath, MANIFEST);
 	newVersionFile(1, manifestPath);
@@ -560,12 +604,12 @@ void serverUpgrade(struct node* dataList, int sockfd){
 	}
 	printf("server557\n");
 	//Sends the data to client
-	
+
 	if( count > 0 ){
 		data = appendData(dataHeader("upgrade", "ProjectFileContent", dataList->PROJECTNAME, count), data);
 		sendData(sockfd, data);
 	}else{
 		sendData(sockfd, makeMsg("upgrade", "Success", "Delete everything in upgrade"));
 	}
-	
+
 }

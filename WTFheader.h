@@ -128,7 +128,6 @@ void serverDestroy(char *, int);
 void serverCurrentVersion( char *, int);
 void serverHistory(struct node *, int);
 void serverRollback(struct node *, int);
-
 void writeHistory(struct manifestNode*, int, char*);
 
 
