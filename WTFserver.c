@@ -387,21 +387,28 @@ void serverPush(struct node* dataList, int sockfd){
 	char* archivePath = getPath(dataPath, ARCHIVE);	
 	printf("archivePath: %s\n", archivePath);
 	char* compressPath = getPath(archivePath, append(int2str(versionNum),".gz"));
+	printf("server390\n");
 	compressProject(dataList->PROJECTNAME, compressPath);
+	printf("server392\n");
 
 	//remove all deleted commits from list of commits
+	printf("Server: parse cList\n");
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
 	struct manifestNode* cPtr = cList->next;
+	printf("server397\n");
 	while( cPtr != NULL ){
+		printf("server399\n");
+		printf("cPtr->path: %s\n", cPtr->path);
 		//remove all deleted commits from list of commits
 		if(strcmp(cPtr->code, "deleted")==0){
+			
 			struct manifestNode* mNode = findFile(cPtr->path ,mList);
 			mNode->code = "deleted";
 			remove(cPtr->path);
 		}
 		cPtr = cPtr->next;
 	}
-	//printf("server405\n");
+	printf("server405\n");
 	//create/rewrite all the files sent
 	struct node* ptr = dataList->FIRSTFILENODE->next;
 	while( ptr != NULL ){
@@ -445,7 +452,7 @@ void serverPush(struct node* dataList, int sockfd){
 		ptr=ptr->next;
 	}
 
-	//printf("server449\n");
+	printf("server449\n");
 
 	int newVersion = (mList->version)+1;
 	newVersionFile( newVersion , manPath);
@@ -456,12 +463,11 @@ void serverPush(struct node* dataList, int sockfd){
 		}
 		mList = mList->next;
 	}
-	//printf("server459\n");
-
-
-
+	
+	printf("server459\n");
 	writeHistory(cList, newVersion ,projectPath);
-
+	printf("server462\n");	
+	
 	sendData(sockfd, versionData("push", dataList->PROJECTNAME, manPath));
 	pthread_mutex_unlock(&mutex); //unlocks
 

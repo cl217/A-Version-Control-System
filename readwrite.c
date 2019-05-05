@@ -22,10 +22,14 @@ void compressProject(char* projectname, char* outFilePath){
 	int fd = createFile(outFilePath);
 	close(fd);
 	
+	printf("rw25\n");
 	
 	gzFile fi = (gzFile)gzopen(outFilePath, "wb");
+	printf("rw28\n");
 	gzwrite(fi, (void*)allFileData, dataLen);
+	printf("rw30\n");
 	gzclose(fi);
+	printf("rw32\n");
 	
 }
 
@@ -196,6 +200,7 @@ struct manifestNode* parseManifest(char* manifestData){
 	while( i < strlen(manifestData) ){
 		struct manifestNode* addThis =
 					(struct manifestNode*)malloc(1*sizeof(struct manifestNode));
+		printf("rw: newnode\n");
 		token = NULL;
 
 		//read in code
@@ -205,7 +210,7 @@ struct manifestNode* parseManifest(char* manifestData){
 		}
 		addThis->code = (char*)malloc((strlen(token)+1)*sizeof(char));
 		strcpy(addThis->code, token);
-		//printf("code: %s\n", token);
+		printf("code: %s\n", token);
 
 		//read in version
 		token = NULL; i++;
@@ -222,7 +227,7 @@ struct manifestNode* parseManifest(char* manifestData){
 		}
 		addThis->path = (char*)malloc((strlen(token)+1)*sizeof(char));
 		strcpy(addThis->path, token);
-		//printf("path: %s\n", token);
+		printf("path: %s\n", token);
 
 		//read hash code
 		token = NULL; i++;
@@ -233,18 +238,28 @@ struct manifestNode* parseManifest(char* manifestData){
 		strcpy(addThis->hash, token);
 		//printf("hash: %s\n", token);
 
-		if(manifestList == NULL ){
-			manifestList=addThis;
-		}else{
-			addThis->next = manifestList;
-			manifestList = addThis;
-		}
+		addThis->next = manifestList;
+		manifestList = addThis;
+		
+		printf("newnode added\n");
+		struct manifestNode* tempPtr = manifestList;
+		while(tempPtr!=NULL){
+			printf("tempPtr\n");
+			tempPtr=tempPtr->next;	
+		}	
+		
 	}
 	struct manifestNode* addThis = (struct manifestNode*)malloc(1*sizeof(struct manifestNode));
 	addThis->version = manVersion;
 	addThis->next = manifestList;
 	manifestList = addThis;
-
+	
+	printf("newnode added\n");
+	struct manifestNode* tempPtr = manifestList;
+	while(tempPtr!=NULL){
+		printf("tempPtr\n");
+		tempPtr=tempPtr->next;	
+	}
 	return manifestList;
 }
 
