@@ -52,14 +52,18 @@ void getAllFiles(char* inDirPath){
 
 
 void decompressDir(char* inFilePath, char* outDirPath){
-	printf("rw 55\n");
-	char buf[5000000];
+
+	int gigabyte = 1073741824;
+	//char buf[5000000];
+	char* buf = (char*)malloc(gigabyte);
+	
 	
 	gzFile fi = (gzFile)gzopen(inFilePath, "rb");
 	gzrewind(fi);
 	int len;
 	if(!gzeof(fi)){
-		len = gzread(fi, buf, sizeof(buf));
+		//len = gzread(fi, buf, sizeof(buf));
+		len = gzread(fi, buf, gigabyte);
 	}	
 	gzclose(fi);
 	
@@ -89,6 +93,8 @@ void decompressDir(char* inFilePath, char* outDirPath){
 		close(fd);
 		ptr = ptr->next;
 	}
+	
+	free(buf);
 }
 
 
