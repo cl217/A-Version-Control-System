@@ -154,8 +154,6 @@ void serverRollback(struct node * dataList, int sockfd) {
 
 	//TODO: make sure the version number is valid. 1<=version<currentversion
 		//if not, send to client an error msg
-
-
 	//find version and project info
 	char * versionAndProject = dataList->PROJECTNAME;
 
@@ -176,13 +174,31 @@ void serverRollback(struct node * dataList, int sockfd) {
 		i++;
 	}
 	version = token; //version
-	printf("p: %s\nv: %s\n",pname,version);
+	//printf("p: %s\nv: %s\n",pname,version);
 
 	char * versionFolder = getPath(".",append(".", pname));
 	versionFolder = getPath(versionFolder, ARCHIVE);
 	char * versionPath = getPath(versionFolder,version);
 	versionPath = append(versionPath,".gz");
 	//printf("vpath: %s\n",versionPath);
+
+	//get current version and compare (error checks)
+	char * projectpath = getPath(".",pname);
+	char * manPath = getPath(projectpath,MANIFEST);
+	char * manData = readFileData(manPath);
+	struct manifestNode * manList = parseManifest(manData);
+	if (manList->version <= atoi(version)) {
+		sendData(sockfd, makeMsg(dataList->name, "Error", "Invalid Version"));
+		return;
+	}
+	if (atoi(version) < 1) {
+		sendData(sockfd, makeMsg(dataList->name, "Error", "Invalid Version"));
+		return;
+	}
+	if( dirExists(projectpath) == 0 ){
+		sendData(sockfd, makeMsg(dataList->name, "Error", "Project not on server"));
+		return; //unsuccessful
+	}
 
 	//hold original history
 	char * hpath = getPath(".",pname);
@@ -240,13 +256,8 @@ void serverRollback(struct node * dataList, int sockfd) {
 
 
 	//TODO - Remove all files in .archive >= of the rollback version
-
-	//TODO - write history
-
 	//send to client a success msg
 	sendData(sockfd, makeMsg("rollback", "success", "Project rolled back"));
-
-
 }
 
 void serverHistory(struct node * dataList, int sockfd) {
