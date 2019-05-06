@@ -1,0 +1,79 @@
+TESTCASES
+
+Test 1: Create a file with 4 documents, commit & push after each addition, test
+rollback and history, then destroy the project.
+
+  ./WTF create p1
+  ./WTF add p1 test1.txt
+  ./WTF commit p1
+  ./WTF push p1
+
+  This sequence successfully creates a directory on the server and client. 'add'
+  successfully adds the file to the manifest, 'commit' successfully adds the new
+  file to the pending commits on the client and server. 'push' successfully
+  sends the files listed in the pending commits to the server.
+
+  ./WTF create p1
+  ./WTF add p1 test2.txt
+  ./WTF commit p1
+  ./WTF push p1
+
+  ./WTF create p1
+  ./WTF add p1 test3.txt
+  ./WTF commit p1
+  ./WTF push p1
+
+  ./WTF create p1
+  ./WTF add p1 test4.txt
+  ./WTF commit p1
+  ./WTF push p1
+
+  The server and client are both up to date and have 4 files in them, to test
+  the 'history' command:
+
+  ./WTF history p1 /*Prints the following on the client side*/
+
+  History:
+  1
+  2
+  upload	1	./p1/test1.txt	8a63191cd06427fd6dfa4684080a5a5d40ae536c
+  3
+  upload	1	./p1/test2.txt	0c6737cee25d5bb06f443e2e7daf229d78ad6b12
+  4
+  upload	1	./p1/test3.txt	5f8ba6cff84bbf4637c9e65da24d63ae79a57b63
+  5
+  upload	1	./p1/test4.txt	04d32ae2bfd48fbf5d1f7d75411a9a2f8f617e49
+
+  Testing rollback:
+
+  ./WTF rollback p1 10 //prints error on the client side due invalid version
+  ./WTF rollback p1 0  //prints error on the client side due invalid version
+  ./WTF rollback p1 5  //prints error on the client side due invalid version
+
+  ./WTF rollback p1 3  //rolls back to version 3 successfully
+
+  Testing history after rollback:
+
+  ./WTF history p1
+
+  /*The following is printed on the server side*/
+  History:
+  1
+  2
+  upload	1	./p1/test1.txt	8a63191cd06427fd6dfa4684080a5a5d40ae536c
+  3
+  upload	1	./p1/test2.txt	0c6737cee25d5bb06f443e2e7daf229d78ad6b12
+  4
+  upload	1	./p1/test3.txt	5f8ba6cff84bbf4637c9e65da24d63ae79a57b63
+  5
+  upload	1	./p1/test4.txt	04d32ae2bfd48fbf5d1f7d75411a9a2f8f617e49
+  3 rollback
+  upload	1	./p1/test2.txt	0c6737cee25d5bb06f443e2e7daf229d78ad6b12
+
+  Testing Destroy:
+
+  ./WTF destroy p1 //Project is successfully destroyed on the server
+
+  /*Following is printed on the client side*/
+  
+  Status:project succesfully destroyed on server
