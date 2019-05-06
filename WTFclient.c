@@ -858,9 +858,12 @@ void wtfrollback( char* projectname, char* version ){
 		exitHandler();
 	}
 
-	//destory local project and checkout servers up to date version
+	//pretty sure only server gets reverted
+	/*
+	destory local project and checkout servers up to date version
 	printf("path: %s\n", getPath(".",projectname));
-	destroyRecursive(getPath(".",projectname));
+	destroyRecursive(getPath(".",projectname)); 
 	wtfcheckout(projectname);
+	*/
 
 }

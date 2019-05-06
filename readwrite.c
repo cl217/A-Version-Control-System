@@ -9,7 +9,7 @@ void compressProject(char* projectname, char* outFilePath){
 	
 	getAllFiles(getPath(".", projectname));
 	
-	printf("fileCount: %d\n", fileCount);
+	//printf("fileCount: %d\n", fileCount);
 	
 	allFileData = appendData( dataHeader("compress", "ProjectFileContent", projectname, fileCount), allFileData);
 	
@@ -17,20 +17,14 @@ void compressProject(char* projectname, char* outFilePath){
 	
 	int dataLen = strlen(allFileData);
 	
-	printf("outPath: %s\n", outFilePath);
+	//printf("outPath: %s\n", outFilePath);
 	
 	int fd = createFile(outFilePath);
 	close(fd);
 	
-	printf("rw25\n");
-	
 	gzFile fi = (gzFile)gzopen(outFilePath, "wb");
-	printf("rw28\n");
 	gzwrite(fi, (void*)allFileData, dataLen);
-	printf("rw30\n");
 	gzclose(fi);
-	printf("rw32\n");
-	
 }
 
 //use zlib to compress entire directory to a single file
@@ -200,7 +194,7 @@ struct manifestNode* parseManifest(char* manifestData){
 	while( i < strlen(manifestData) ){
 		struct manifestNode* addThis =
 					(struct manifestNode*)malloc(1*sizeof(struct manifestNode));
-		printf("rw: newnode\n");
+		//printf("rw: newnode\n");
 		token = NULL;
 
 		//read in code
@@ -210,7 +204,7 @@ struct manifestNode* parseManifest(char* manifestData){
 		}
 		addThis->code = (char*)malloc((strlen(token)+1)*sizeof(char));
 		strcpy(addThis->code, token);
-		printf("code: %s\n", token);
+		//printf("code: %s\n", token);
 
 		//read in version
 		token = NULL; i++;
@@ -241,12 +235,6 @@ struct manifestNode* parseManifest(char* manifestData){
 		addThis->next = manifestList;
 		manifestList = addThis;
 		
-		printf("newnode added\n");
-		struct manifestNode* tempPtr = manifestList;
-		while(tempPtr!=NULL){
-			printf("tempPtr\n");
-			tempPtr=tempPtr->next;	
-		}	
 		
 	}
 	struct manifestNode* addThis = (struct manifestNode*)malloc(1*sizeof(struct manifestNode));
@@ -254,12 +242,6 @@ struct manifestNode* parseManifest(char* manifestData){
 	addThis->next = manifestList;
 	manifestList = addThis;
 	
-	printf("newnode added\n");
-	struct manifestNode* tempPtr = manifestList;
-	while(tempPtr!=NULL){
-		printf("tempPtr\n");
-		tempPtr=tempPtr->next;	
-	}
 	return manifestList;
 }
 
