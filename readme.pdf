@@ -52,8 +52,9 @@ CS214 Asst3 WTF
 	
 	
 	./Archive files
-		When a project is pushed to the server, an old version of the project is stored in a ".<projectname>" directory. Inside this folder
-		is a ".archive" directory containing all old versions starting with version 1. Old versions are stored in a tared zipped folder. 
+		When a project is pushed to the server, an old version of the project is stored in a ".<projectname>" directory. Inside this 
+		folder is a ".archive" directory containing all old versions starting with version 1. Old versions are stored in a 
+		tarred zipped folder. 
 	
 	
 	
