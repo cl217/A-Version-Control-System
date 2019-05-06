@@ -12,10 +12,8 @@
 	**3.8 add -done
 	3.9 remove -done
 	3.10 currentversion -done
-	3.11 history- done //TODO: Rollback needs to write to history
-
-
-	3.12 rollback
+	3.11 history- done
+	3.12 rollback -done 
 
 */
 
@@ -210,6 +208,7 @@ void wtfconfigure( char* ip, char* port){
 	write(file, "\n", 1);
 	write(file, port, strlen(port));
 	close(file);
+	printf("Status: configure successful\n");
 }
 
 
@@ -557,19 +556,22 @@ void wtfupgrade( char* projectname ){
 	wtfconnect(); //connects, shuts down if can't
 
 	//sends the update list to server
+	printf("client559\n");
 	sendData(sockfd, versionData("upgrade", projectname, updatePath));
+	printf("client561\n");
 	struct node* dataList = receiveData(sockfd); //receives data from server
+	printf("client563\n");
 
 	//Errorcheck-project not on server
 	if( strcmp(dataList->next->name, "Error")==0 ){
 		printf("Error: %s\n", dataList->next->content);
 		exitHandler();
 	}
-
+	printf("client570\n");
 	//read in client's manifest and update file
 	struct manifestNode* mList = parseManifest(readFileData(manPath));
 	struct manifestNode* uList = parseManifest(readFileData(updatePath));
-
+	printf("client574\n");
 	//delete all files labeled as deleted on .update
 	struct manifestNode* uPtr = uList->next;
 	while( uPtr != NULL ){
@@ -581,13 +583,16 @@ void wtfupgrade( char* projectname ){
 		}
 		uPtr = uPtr->next;
 	}
-
+	printf("client586\n");
+	printf("%s\n", dataList->next->name);
 	if( strcmp(dataList->next->name, "Success")!=0 ){ //if not already done
+		printf("client588\n");
 		//create/rewrite all files received from server
 		struct node* ptr = dataList->FIRSTFILENODE;
 		while( ptr != NULL ){
+			printf("client593\n");
+			printf("%s\n", ptr->name);
 			int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
-
 			if( fd<0 ){ //can't open, file in subdirectories that havent been created
 				char* tempPath = (char*)malloc((strlen(ptr->name)+1)*sizeof(char));
 				strcpy(tempPath, ptr->name);
@@ -598,10 +603,11 @@ void wtfupgrade( char* projectname ){
 					return;
 				}
 			}
-
+			printf("client606\n");
 			//update manifest
 			struct manifestNode* uNode = findFile(ptr->name, uList);
 			struct manifestNode* mNode = findFile(ptr->name, mList);
+			printf("client610\n");
 			if( mNode == NULL ){ //if new file to be created
 				struct manifestNode* addThis = (struct manifestNode*)malloc(1*sizeof(struct manifestNode));
 				addThis->code = "uptodate";
@@ -611,6 +617,7 @@ void wtfupgrade( char* projectname ){
 				addThis->next = mList->next;
 				mList->next = addThis;
 			}else{ //if existing file to be updates
+				printf("client620\n");
 				mNode->code = "uptodate";
 				mNode->version = uNode->version;
 				mNode->hash = uNode->hash;
@@ -623,7 +630,7 @@ void wtfupgrade( char* projectname ){
 			ptr=ptr->next;
 		}
 	}
-
+	printf("client628\n");
 	//write out updates manifest
 	newVersionFile( uList->version, manPath);
 	mList = mList->next;
@@ -633,7 +640,7 @@ void wtfupgrade( char* projectname ){
 		}
 		mList = mList->next;
 	}
-
+	printf("client638\n");
 	remove(getPath(projectPath, UPDATE)); //removes .update
 	printf("Status: upgrade successful\n");
 }
@@ -715,8 +722,10 @@ void wtfcommit( char* projectname ){
 	//send commit to server
 	sendData(sockfd, versionData("commit", projectname, commitPath));
 	printf("client712: commit sent to server\n");
-
-	printf("commit successfully saved\n");
+	dataList = receiveData(sockfd);
+	if( strcmp(dataList->next->name, "Success")==0 ){
+		printf("Status: %s\n", dataList->next->content);
+	}
 }
 
 /**
@@ -857,7 +866,8 @@ void wtfrollback( char* projectname, char* version ){
 		printf("Error: %s\n", dataList->next->content);
 		exitHandler();
 	}
-
+	
+	printf("Status: project on server has been rolled back to version %s successfully\n", version);
 	//pretty sure only server gets reverted
 	/*
 	destory local project and checkout servers up to date version

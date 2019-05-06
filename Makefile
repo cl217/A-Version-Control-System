@@ -10,8 +10,11 @@ TEST: WTFtest.o
 	mkdir client1
 	mkdir client1/testproj
 	mkdir client1/testproj/folder1
+	mkdir client1/testproj/folder1/folder2
 	echo randomtext > client1/testproj/folder1/file1.txt
-	touch client1/testproj/folder1/file2.c
+	printf "#include<stdio.h>\nint main( int argc, char** argv){\n\tprintf(\"Hello world\");\n\treturn 0;\n}" > client1/testproj/folder1/folder2/test.c
+	printf "all: TEST\nTEST: test.c\n\tgcc -g test.c -o test" > client1/testproj/folder1/folder2/Makefile
+	touch client1/testproj/file3.txt
 	mkdir client2
 	cp WTFserver server
 	cp WTF client1

@@ -1,0 +1,290 @@
+Files built from make test:
+	server
+		WTFserver
+	client1
+		WTF
+		testproj
+			folder1
+				file1.txt
+					randomtext
+				folder2
+					test.c 
+						#include<stdio.h>
+						int main(int argc, char**argv){
+							printf("Hello world");
+							return 0;
+						}
+					Makefile
+						all: TEST
+						TEST: test.c
+							gcc -g -c -o test
+		file3.txt
+			(empty file)
+	client2
+		WTF
+
+
+./WTFtest:
+	
+	Connection Setup:
+		server: ./WTFserver 32213
+		client1: ./WTF configure 127.0.0.1 21213
+		client2: ./WTF configure 127.0.0.1 21213
+	Results:
+		newfile: client1/.configure
+		newfile: client2/.configure
+	-This is the expected result
+
+
+	Project creation:
+		client1: ./WTF create testproj
+	Results:
+		newdir: server/testproj
+		newdir: server/.testproj/.archive
+		newdir: server/.testproj/.commit
+		newfile: server/testproj/.history
+			1
+		newfile: server/testproj/.manifest
+			1
+		newfile: client1/testproj/.manifest
+			1
+	-This is the expected result
+
+	
+	Add file:
+		client1: ./WTF add testproj file3.txt
+	Results: 
+		modified: server/testproj/.manifest
+			1
+			upload	0	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+	-This is the expected result
+
+
+	Commit:
+		client1: ./WTF commit testproj
+	Results: 
+		newfile: client1/testproj/.commit
+			1
+			upload	1	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+		newfile: server/testproj/.commit/1
+			1
+			upload	1	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+	-This is the expected result
+
+
+	Push:
+		client1: ./WTF push testproj
+	Results: 
+		deleted: client1/.commit
+		deleted: server/.commit/1
+		newfile: server/testproj/file3.txt
+		newdir: server/.testproj/.archive/1.gz
+		modified: server/testproj/.history
+			1
+			2
+			upload	1	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+		modified: server/testproj/.manifest
+			2
+			uptodate	1	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+		modified: client1/testproj/.manifest
+			2
+			uptodate	1	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+	-This is the expected result
+	
+	Checkout:
+		client2: ./WTF checkout testproj
+	Results:
+		newdir: client2/testproj
+		newfile: client2/testproj/file3.txt
+		newfile: client2/testproj/.manifest
+			2
+			uptodate	1	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709 
+	-This is the expected result
+
+
+	Remove:
+		client2: ./WTF remove testproj ./testproj/file3.txt
+	Results:
+		modified: client2/testproj/.manifest
+			2
+	-This is the expected result
+
+
+	Commit:
+		client2: ./WTF commit testproj
+		client2: ./WTF commit testproj
+	Results:
+		newfile: client2/testproj/.commit
+			1
+			deleted	2	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+		newfile: server/testproj/.commit/1
+			1
+			deleted	2	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+		newfile: server/testproj/.commit/2			
+			1
+			deleted	2	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709	
+	-This is the expected result
+
+
+	Push:
+		client2: ./WTF push testproj
+	Results:
+		deleted: client2/.commit
+		deleted: server/testproj/.commit/1
+		deleted: server/testproj/.commit/2
+		deleted: server/testproj/file3.txt
+		newdir: server/.testproj/.archive/2.gz
+		modified: server/testproj/.history
+			1
+			2
+			upload	1	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+			3
+			deleted	2	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+		modified: server/testproj/.manifest
+			3
+		modified: client2/testproj/.manifest
+			3
+	-This is the expected result
+
+
+	Update:
+		client1: ./WTF update testproj 
+	Results:
+		newfile: client1/testproj/.update
+			3
+			D	1	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+	-This is the expected result
+
+
+	Upgrade:
+		client1: ./WTF upgrade testproj
+	Results:
+		deleted: client1/testproj/.upgrade
+		modified: client1/testproj/.manifest
+			3
+	-This is the expected result	
+	
+
+	Add/Commit/Push multiple files in subdir:
+		client1: ./WTF add testproj folder1/file1.txt
+		client1: ./WTF add testproj folder1/folder2/test.c
+		client1: ./WTF add testproj folder1/folder2/Makefile
+		client1: ./WTF commit testproj
+		client1: ./WTF push testproj
+	Results:
+		newfile: server/testproj/folder1/file1.txt
+		newfile: server/testproj/folder1/folder2/test.c
+		newfile: server/testproj/folder1/folder2/Makefile
+		newdir: server/.testproj/.archive/3.gz
+		modified: server/testproj/.history
+			1
+			2
+			upload	1	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+			3
+			deleted	2	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+			4
+			upload	1	./testproj/folder1/file1.txt	196955e0bede725eefd1fe71baadf03007deaaeb
+			upload	1	./testproj/folder1/folder2/test.c	420e71e298cb045c6d4ed9763a346a2e0ea9aace
+			upload	1	./testproj/folder1/folder2/Makefile	af37c7ed2e0742672856e11b98939b11ba19b93a
+		modified: server/testproj/.manifest
+			4
+			uptodate	1	./testproj/folder1/folder2/Makefile	af37c7ed2e0742672856e11b98939b11ba19b93a
+			uptodate	1	./testproj/folder1/folder2/test.c	420e71e298cb045c6d4ed9763a346a2e0ea9aace
+			uptodate	1	./testproj/folder1/file1.txt	196955e0bede725eefd1fe71baadf03007deaaeb
+		modified: client1/testproj/.manifest
+			4
+			uptodate	1	./testproj/folder1/folder2/Makefile	af37c7ed2e0742672856e11b98939b11ba19b93a
+			uptodate	1	./testproj/folder1/folder2/test.c	420e71e298cb045c6d4ed9763a346a2e0ea9aace
+			uptodate	1	./testproj/folder1/file1.txt	196955e0bede725eefd1fe71baadf03007deaaeb
+		-This is the expected result
+
+
+	Update/Upgrade multiple files, modify file-commit/push
+		client2: ./WTF update testproj
+		client2: ./WTF upgrade testproj
+		modificiation: client2/testproj/folder1/file1.txt to "This file's contents have been changed.")
+		client2: ./WTF commit testproj
+		client2: ./WTF push testproj
+	Results:
+		newdir: server/.testproj/.archive/4.gz
+		modified: server/testproj/.history
+			...
+		modified: server/testproj/.manifest
+			5
+			uptodate	2	./testproj/folder1/file1.txt	c842d2dcdd0a46fa0695f458e1542756df2c2cb8
+			uptodate	1	./testproj/folder1/folder2/test.c	420e71e298cb045c6d4ed9763a346a2e0ea9aace
+			uptodate	1	./testproj/folder1/folder2/Makefile	af37c7ed2e0742672856e11b98939b11ba19b93a
+		modified: client2/testproj/.manifiest
+			5
+			uptodate	2	./testproj/folder1/file1.txt	c842d2dcdd0a46fa0695f458e1542756df2c2cb8
+			uptodate	1	./testproj/folder1/folder2/test.c	420e71e298cb045c6d4ed9763a346a2e0ea9aace
+			uptodate	1	./testproj/folder1/folder2/Makefile	af37c7ed2e0742672856e11b98939b11ba19b93a
+	-This is the expected result
+
+	
+	Update, Upgrade a modified file:
+		client1: ./WTF update testproj 
+			.commit
+				5
+				M	2	./testproj/folder1/file1.txt	c842d2dcdd0a46fa0695f458e1542756df2c2cb8
+		client1: ./WTF upgrade testproj
+		
+	Results: 
+	modified: client1/testproj/.manifest
+		5
+		uptodate	2	./testproj/folder1/file1.txt	c842d2dcdd0a46fa0695f458e1542756df2c2cb8
+		uptodate	1	./testproj/folder1/folder2/test.c	420e71e298cb045c6d4ed9763a346a2e0ea9aace
+		uptodate	1	./testproj/folder1/folder2/Makefile	af37c7ed2e0742672856e11b98939b11ba19b93a
+	-This is the expected result
+
+
+	Rollback to version 2 (with just the file3.txt)
+		client1: ./WTF rollback testproj 2
+	Result:
+		deleted: server/.testproj/.archive/4.gz
+		deleted: server/.testproj/.archive/3.gz
+		deleted: server/.testproj/.archive/2.gz
+		modified: server/testproj/.history
+			...
+		modified: server/testproj/.manifest
+			2
+			uptodate	1	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+	-This is the expected result
+		
+
+	Currentversion:
+		client1: ./WTF currentversion testproj
+	Result:
+		Current Version: 2
+	-This is the expected result
+
+	History:
+		client1: ./WTF history testproj
+	Result:
+		1
+		2
+		upload	1	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+		3
+		deleted	2	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+		4
+		upload	1	./testproj/folder1/file1.txt	196955e0bede725eefd1fe71baadf03007deaaeb
+		upload	1	./testproj/folder1/folder2/test.c	420e71e298cb045c6d4ed9763a346a2e0ea9aace
+		upload	1	./testproj/folder1/folder2/Makefile	af37c7ed2e0742672856e11b98939b11ba19b93a
+		5
+		upload	2	./testproj/folder1/file1.txt	c842d2dcdd0a46fa0695f458e1542756df2c2cb8
+		2 rollback
+		upload	1	./testproj/file3.txt	da39a3ee5e6b4b0d3255bfef95601890afd80709
+	-This is the expected result
+
+	
+	Destroy
+		client1: ./WTF destroy testproj
+	Result: 
+		deleted: server/testproj/
+		deleted: server/.testproj/
+	-This is the expected result
+		
+	
+
+	
+			

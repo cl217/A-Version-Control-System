@@ -175,7 +175,7 @@ void serverRollback(struct node * dataList, int sockfd) {
 	version = token; //version
 	//printf("p: %s\nv: %s\n",pname,version);
 
-	//TODO: make sure the version number is valid. 1<=version<currentversion
+	//make sure the version number is valid. 1<=version<currentversion
 	char* projectpath = getPath(".", pname);
 	struct manifestNode* mList = parseManifest(readFileData(getPath(projectpath, MANIFEST)));
 	int currentVersion = mList->version; //This is the current version
@@ -254,8 +254,6 @@ void serverRollback(struct node * dataList, int sockfd) {
 		printf("%s\n", substr);
 	}
 
-
-
 	//destory original dir
 	destroyRecursive(getPath(".",pname));
 	//decompress file to new project file
@@ -276,7 +274,7 @@ void serverRollback(struct node * dataList, int sockfd) {
 	i = atoi(version);
 	char * archiveFile = getPath("./.",pname);
 	archiveFile = getPath(archiveFile,ARCHIVE);
-	while (i <= currentVersion) {
+	while (i <= currentVersion-1) {
 		char * archiveFile = append("./.",pname);
 		archiveFile = getPath(archiveFile,ARCHIVE);
 		archiveFile = getPath(archiveFile, int2str(i));
@@ -379,33 +377,39 @@ void serverCheckout(char* projectname, int sockfd) {
 }
 
 void serverCommit(struct node* dataList, int sockfd){
-	//printf("server273\n");
+	printf("server382\n");
 	char* projectPath = getPath(".", dataList->PROJECTNAME);
 
 	//sends manifest, fails if project or manifest not found
 	if(serverSendManifest(dataList, sockfd)==0){
 		return;
 	}
-	//printf("server280\n");
+	printf("server389\n");
 	dataList = receiveData(sockfd); //gets the new commit data
+	printf("server391\n");
 	//count num of active commits in .commit folder
 	char* commitFolderPath = getPath(projectPath, COMMIT);
 	int countFiles = 1;
+	printf("server395\n");
 	DIR* dir = opendir(commitFolderPath);
+	printf("server397\n");
 	struct dirent* entry;
 	while((entry=readdir(dir)) != NULL ){
+		printf("server400\n");
 		if(entry->d_type == DT_REG){
 			countFiles++;
 		}
 	}
+	printf("server405\n");
 	closedir(dir);
-	//printf("server293\n");
+	printf("server293\n");
 	//create a new commit in .commit folder
 	int commitFD = createFile(getPath(commitFolderPath, int2str(countFiles)));
 	char* writeout = dataList->FIRSTFILENODE->content;
 	write(commitFD, writeout, strlen(writeout));
 	close(commitFD);
-	//printf("server299\n");
+	sendData(sockfd, makeMsg("commit", "Success", "Commit successfully saved in server"));
+	printf("server299\n");
 }
 
 void writeHistory(struct manifestNode * newCommits, int newVersion, char * projectpath) {
@@ -652,12 +656,13 @@ void serverUpgrade(struct node* dataList, int sockfd){
 	}
 	printf("server557\n");
 	//Sends the data to client
-
 	if( count > 0 ){
+		printf("server663\n");
 		data = appendData(dataHeader("upgrade", "ProjectFileContent", dataList->PROJECTNAME, count), data);
 		sendData(sockfd, data);
 	}else{
+		printf("server667\n");
 		sendData(sockfd, makeMsg("upgrade", "Success", "Delete everything in upgrade"));
 	}
-
+	printf("server668\n");
 }

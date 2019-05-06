@@ -249,6 +249,7 @@ struct node* splitData(char* data){
 		}
 	}
 	//traverse(dataList);
+	endPtr->next = NULL;
 	return dataList; //return head of list
 }
 
