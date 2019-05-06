@@ -1,5 +1,37 @@
 CS214 Asst3 WTF
 
+**Usage**
+	Files:
+		WTFserver - Server Side 
+		WTF - Client Side
+		WTFTest
+		
+	To start the program, run "make test" on the command line. This generates the following basic file structure:
+	
+	Asst3
+	|--Server
+	    |--WTFserver
+	|--Client1
+	    |-WTF
+	    |--clientprojectfiles....
+	|--Client2
+	    |--WTF
+	    |--otherclientprojectfiles...
+	|--WTFtest
+	
+	Then run "./WTFtest"
+	This executes the WTFtest program, WTFtest creates project p1 in Client1 and then continues the rest of the commands 
+	found in WTFtest.c
+	
+	|--Client1
+	    |--WTF
+	    |--p1
+	        |--p1files....
+		
+	
+	For usage other than WTFtest, the WTF and WTFserver need to be in seperate directories.
+	
+		
 
 **Design**
 	
@@ -51,7 +83,10 @@ CS214 Asst3 WTF
 				};
 	
 	
-	Info on ./Archive files?
+	./Archive files
+		When a project is pushed to the server, an old version of the project is stored in a ".<projectname>" directory. Inside this 
+		folder is a ".archive" directory containing all old versions starting with version 1. Old versions are stored in a 
+		tarred zipped folder. 
 	
 	
 	
