@@ -174,14 +174,26 @@ void serverRollback(struct node * dataList, int sockfd) {
 	}
 	version = token; //version
 	//printf("p: %s\nv: %s\n",pname,version);
-	
+
 	//TODO: make sure the version number is valid. 1<=version<currentversion
 	char* projectpath = getPath(".", pname);
 	struct manifestNode* mList = parseManifest(readFileData(getPath(projectpath, MANIFEST)));
 	int currentVersion = mList->version; //This is the current version
 	printf("currentVersion: %d\n", currentVersion);
 	//Errorcheck - if error, send to client an error msg
-	
+	if( dirExists(projectpath) == 0 ){
+		sendData(sockfd, makeMsg(dataList->name, "Error", "Project not on server"));
+		return; //unsuccessful
+	}
+	if( atoi(version) >= currentVersion){
+		sendData(sockfd, makeMsg(dataList->name, "Error", "Enter a version number older than the current Version"));
+		return; //unsuccessful
+	}
+	if( atoi(version) < 1 ){
+		sendData(sockfd, makeMsg(dataList->name, "Error", "Invalid Version"));
+		return; //unsuccessful
+	}
+
 
 	char* versionFolder = getPath(getPath(".",append(".", pname)), ARCHIVE);
 	char* versionPath = append( getPath(versionFolder,version),".gz");
@@ -191,7 +203,7 @@ void serverRollback(struct node * dataList, int sockfd) {
 	char* hpath = getPath(projectpath, HISTORY);
 	char * history = readFileData(hpath);
 	char * nextVers = int2str(atoi(version)+1); //get the next version to break at
-	
+
 	//get history substring of rollback version
 	int datalen = strlen(history);
 	char* line = NULL;
@@ -225,11 +237,11 @@ void serverRollback(struct node * dataList, int sockfd) {
 			line = NULL;
 			end++;
 		}
-		
+
 	}
 	printf("nextVers: %s\n", nextVers);
 	printf("endline(%d): %s\n", end, line);
-	
+
 	char* substr;
 	start=start+1; end=end-1;
 	if( start >= end ){
@@ -248,7 +260,7 @@ void serverRollback(struct node * dataList, int sockfd) {
 	destroyRecursive(getPath(".",pname));
 	//decompress file to new project file
 	decompressDir(versionPath, ".");
-	
+
 	//write to .history file
 	int fileFD = createFile(getPath(projectpath, HISTORY));
 	write(fileFD, history, strlen(history));
@@ -257,11 +269,24 @@ void serverRollback(struct node * dataList, int sockfd) {
 	write(fileFD, " rollback\n", strlen(" rollback\n"));
 	if( substr != NULL ){
 		write(fileFD, substr, strlen(substr));
-	}	
+	}
 	close(fileFD);
-	
-	//TODO - Remove all files in .archive >= the rollback version
 
+	//TODO - Remove all files in .archive >= the rollback version
+	i = atoi(version);
+	char * archiveFile = getPath("./.",pname);
+	archiveFile = getPath(archiveFile,ARCHIVE);
+	while (i <= currentVersion) {
+		char * archiveFile = append("./.",pname);
+		archiveFile = getPath(archiveFile,ARCHIVE);
+		archiveFile = getPath(archiveFile, int2str(i));
+		archiveFile = append(archiveFile,".gz");
+
+		char * command = append("rm ", archiveFile);
+		printf("command: %s\n",command);
+		system(command);
+		i++;
+	}
 
 
 	//send to client a success msg
@@ -279,6 +304,7 @@ void serverHistory(struct node * dataList, int sockfd) {
 	}
 
 	char* data = versionData(dataList->name,projectname, historyPath);
+
 
 	sendData(sockfd, data); //Sends data to client
 
