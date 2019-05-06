@@ -81,6 +81,7 @@ rollback and history, then destroy the project.
 Test 2: Test creating a project with multiple subdirectories, test checkout
 update, upgrade, and checkout commands
 
+  Test Upload:
   A project with the following directory structure was successfully created,
   commited, and pushed to the server
 
@@ -110,5 +111,51 @@ update, upgrade, and checkout commands
   ./WTF update p1
 
   /*The following is printed to STDOUT*/
-  
+
   U ./p1/test4.txt
+  Status: update successful
+
+
+  Testing Modify:
+  -Create 2 clients, c1 and c2
+  -In c1, create a project p1 containing a 'test.txt' that contains the
+   following: "test file", commit and push this to the server
+  -In c2, checkout p1, edit the contents of 'test.txt'. commit and push.
+  -In c1 call update:
+
+  ./WTF update p1
+
+  /*The following is printed to STDOUT*/
+  M ./p1/test.txt
+  Status: update successful
+
+
+  Testing Upgrade:
+  -In c1, the server has a more up to date version of the project, calling
+  upgrade at this point upgrades the 'test.txt' to the same version present on
+  the server.
+
+  Test Remove:
+   -On client c1 call remove:
+   ./WTF remove p1 test.fileText
+
+   /*Following is printed to STDOUT*/
+   Status: file succesfully removed from manifest
+
+   -commit and push to server
+   -On client c2 call update:
+   ./WTF update p1
+
+   /*Following is printed to STDOUT*/
+   D ./p1/test.txt
+   Status: update successful
+
+  Test Add:
+  -In client c1, add test.txt, commit, and push.
+  -In client c2, call update:
+
+  ./WTF update p1
+
+  /*The following is printed to STDOUT*/
+  A ./p1/test.txt
+  Status: update successful
