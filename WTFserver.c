@@ -321,8 +321,11 @@ void serverDestroy(char* projectname, int sockfd) {
 		pthread_mutex_unlock(&mutex); //unlocks
 		return;
 	}
-
+	char * archivePath = append("./.",projectname);
 	destroyRecursive(projectPath);
+	//printf("archPath: %s\n",archivePath);
+	destroyRecursive(archivePath);
+
 
 	//remove mutex for the project
 	struct mutexNode* ptr = mutexList;
