@@ -159,3 +159,47 @@ update, upgrade, and checkout commands
   /*The following is printed to STDOUT*/
   A ./p1/test.txt
   Status: update successful
+
+Test 3: Rest of the Commands
+
+  Current Version (called in client c1 above)
+  ./WTF currentversion p1
+
+  /*Following is printed to STDOUT*/
+  Current Version: 5
+  File: ./p1/test.txt	Version: 1
+
+  History:
+  ./WTF history p1
+
+  /*Following is printed to STDOUT*/
+  History:
+  1
+  2
+  upload	1	./p1/test.txt	0181d93fee60b818e3f92e470ea97a2aff4ca56a
+  3
+  upload	2	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
+  4
+  deleted	3	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
+  5
+  upload	1	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
+
+  Rollback: (roll it back to version 3 and then check to see if history was
+  appended properly)
+
+  ./WTF rollback p1 3
+  ./WTF history p1
+
+  /*Following is printed to STDOUT*/
+  History:
+  1
+  2
+  upload	1	./p1/test.txt	0181d93fee60b818e3f92e470ea97a2aff4ca56a
+  3
+  upload	2	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
+  4
+  deleted	3	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
+  5
+  upload	1	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
+  3 rollback
+  upload	2	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
