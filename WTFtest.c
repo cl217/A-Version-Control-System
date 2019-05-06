@@ -117,7 +117,6 @@ int main( int argc, char** argv ){
 	//Client2: destroy 		
 	printf("client1: ./WTF destroy testproj\n");
 	execWTF("./client1", (char*[]) {"./WTF", "destroy", "testproj", NULL} );
-	
 	kill(serverProc, SIGINT);
     	return 0;	
 }

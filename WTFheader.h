@@ -39,6 +39,8 @@
 
 
 /** structures **/
+
+//for parsing data sent between client/server
 struct node{
 	char* nodeType; //command, dataType, project, numFile, fileName, fileContent
 	char* name; //also used for numFile
@@ -46,8 +48,9 @@ struct node{
 	struct node* next;
 };
 
+//for parsing manifest/commit/update file entries
 struct manifestNode{
-	char* code; //upload, modify, deleted, uptodate -prob not needed
+	char* code; //upload, modify, deleted, uptodate
 	int version;
 	char* path;
 	char* hash;
@@ -150,8 +153,5 @@ void wtfupdate(char*);
 void wtfupgrade(char*);
 void traverseDir(char*);
 
-
-/** testing purposes **/
-void traverse(struct node*);
 
 #endif

@@ -7,21 +7,17 @@ void compressProject(char* projectname, char* outFilePath){
 	allFileData = NULL;
 	fileCount = 0;
 	
+	//Gets the contents of all files 
 	getAllFiles(getPath(".", projectname));
-	
-	//printf("fileCount: %d\n", fileCount);
-	
 	allFileData = appendData( dataHeader("compress", "ProjectFileContent", projectname, fileCount), allFileData);
 	
-	//printf("allFileData: %s\n", allFileData);
+	int dataLen = strlen(allFileData); //length of allFileData
 	
-	int dataLen = strlen(allFileData);
-	
-	//printf("outPath: %s\n", outFilePath);
-	
+	//creates the compressed file
 	int fd = createFile(outFilePath);
 	close(fd);
 	
+	//writes to the compressed file
 	gzFile fi = (gzFile)gzopen(outFilePath, "wb");
 	gzwrite(fi, (void*)allFileData, dataLen);
 	gzclose(fi);
@@ -40,7 +36,6 @@ void getAllFiles(char* inDirPath){
 				&& strcmp(".", entry->d_name)!=0 && strcmp("..", entry->d_name)!=0 ){
 			getAllFiles(entrypath); //go in subdirectory-recursive traversal
 		}else if(entry->d_type == DT_REG){ //is file
-			printf("file: %s\n", entrypath);
 			fileCount++;
 			allFileData = appendFileData(allFileData, entrypath);				
 		}
@@ -52,7 +47,6 @@ void getAllFiles(char* inDirPath){
 void decompressDir(char* inFilePath, char* outDirPath){
 
 	int gigabyte = 1073741824;
-	//char buf[5000000];
 	char* buf = (char*)malloc(gigabyte);
 	
 	
@@ -221,7 +215,7 @@ struct manifestNode* parseManifest(char* manifestData){
 		}
 		addThis->path = (char*)malloc((strlen(token)+1)*sizeof(char));
 		strcpy(addThis->path, token);
-		printf("path: %s\n", token);
+		//printf("path: %s\n", token);
 
 		//read hash code
 		token = NULL; i++;
@@ -274,7 +268,7 @@ char* writeToVersionFile(char* versionPath, char* code, int curVersion, char*pat
 void newVersionFile(int newVersion, char* filePath){
 	int fileFD = open(filePath, O_WRONLY|O_CREAT|O_TRUNC, 0666);
 	if(fileFD<0){
-		printf("error2: creating file\n");return;
+		printf("error: creating file\n");return;
 	}
 	char * versionStr = int2str(newVersion);
 	write(fileFD, versionStr, strlen(versionStr));

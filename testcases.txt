@@ -116,20 +116,20 @@ update, upgrade, and checkout commands
   Status: update successful
 
 
-  Testing Modify:
-  -Create 2 clients, c1 and c2
-  -In c1, create a project p1 containing a 'test.txt' that contains the
-   following: "test file", commit and push this to the server
-  -In c2, checkout p1, edit the contents of 'test.txt'. commit and push.
-  -In c1 call update:
+Test 3: Upgrade conflicts
+	Senario: 
+		-Clients: c1 and c2
+		-c1, create project p1, adds empty file 'test.txt, commit and push
+		-c2, checkout p1. Modifies test.txt with "hello". commit and push
+		-c1 modifies test.txt with "bye". 
+	Command: 
+		c2: update p1
+			Result:
+				CONFLICT ./p1/test.txt
+				Error: Can't update, fix conflicts and try again
+			-This is the expected result
 
-  ./WTF update p1
-
-  /*The following is printed to STDOUT*/
-  M ./p1/test.txt
-  Status: update successful
-
-
+Test 4:
   Testing Upgrade:
   -In c1, the server has a more up to date version of the project, calling
   upgrade at this point upgrades the 'test.txt' to the same version present on
@@ -160,7 +160,7 @@ update, upgrade, and checkout commands
   A ./p1/test.txt
   Status: update successful
 
-Test 3: Rest of the Commands
+Test 5: Rest of the Commands
 
   Current Version (called in client c1 above)
   ./WTF currentversion p1

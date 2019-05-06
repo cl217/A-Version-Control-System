@@ -1,6 +1,6 @@
 #include "WTFheader.h"
 
-
+//finds and returns the mutex of the projectname
 struct mutexNode* getMutex( char* projectname, struct mutexNode* mutexList ){
 	struct mutexNode* ptr = mutexList;
 	while( ptr!=NULL ){
@@ -198,39 +198,4 @@ int createFile(char* filePath){
 		printf("error creating file\n"); return 0;
 	}
 	return fileFD;
-}
-
-void traverse(struct node* list){
-	printf("\ntraverse()\n\n");
-	struct node* ptr = list;
-	while( ptr != NULL ){
-		char* nodeType = ptr->nodeType;
-
-		printf("type(%s)\n", ptr->nodeType);
-
-		if(strcmp(nodeType, "command")==0){
-			printf("\tname(%s)\n", ptr->name);
-
-		}else if(strcmp(nodeType, "dataType")==0){
-			printf("\tname(%s)\n", ptr->name);
-
-		}else if(strcmp(nodeType, "project")==0){
-			printf("\tname(%s)\n", ptr->name);
-
-		}else if(strcmp(nodeType, "numFile")==0){
-			printf("\tname(%s)\n", ptr->name);
-
-		}else if(strcmp(nodeType, "fileName")==0){
-			printf("\tname(%s)\n", ptr->name);
-
-		}else if(strcmp(nodeType, "fileContent")==0){
-			printf("\tname(%s)\n", ptr->name);
-			printf("\tcontent(%s)\n", ptr->content);
-		}else{
-			printf("\tinvalid node type\n");
-		}
-
-		printf("\n");
-		ptr = ptr->next;
-	}
 }

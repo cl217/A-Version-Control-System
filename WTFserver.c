@@ -9,7 +9,6 @@ void exitSignalHandler( int sig_num ){
 		if( threadList->next == NULL ){
 			printf("Server: Server has been shut down.\n");
 		}else{
-			//TODO: should probably identify the client
 			printf("Server: A client has been disconnected\n");
 		}
 		pthread_cancel(threadList->thread);
@@ -173,13 +172,11 @@ void serverRollback(struct node * dataList, int sockfd) {
 		i++;
 	}
 	version = token; //version
-	//printf("p: %s\nv: %s\n",pname,version);
 
 	//make sure the version number is valid. 1<=version<currentversion
 	char* projectpath = getPath(".", pname);
 	struct manifestNode* mList = parseManifest(readFileData(getPath(projectpath, MANIFEST)));
 	int currentVersion = mList->version; //This is the current version
-	printf("currentVersion: %d\n", currentVersion);
 	//Errorcheck - if error, send to client an error msg
 	if( dirExists(projectpath) == 0 ){
 		sendData(sockfd, makeMsg(dataList->name, "Error", "Project not on server"));
@@ -197,7 +194,6 @@ void serverRollback(struct node * dataList, int sockfd) {
 
 	char* versionFolder = getPath(getPath(".",append(".", pname)), ARCHIVE);
 	char* versionPath = append( getPath(versionFolder,version),".gz");
-	//printf("vpath: %s\n",versionPath);
 
 	//hold original history
 	char* hpath = getPath(projectpath, HISTORY);
@@ -208,22 +204,18 @@ void serverRollback(struct node * dataList, int sockfd) {
 	int datalen = strlen(history);
 	char* line = NULL;
 	int start = 0;
-	printf("datalen: %d\n", datalen);
 	while( start < datalen ){
 		while( start < datalen && history[start] != '\n' ){
 			line = appendChar(line, history[start]);
 			start++;
 		}
 		if( line != NULL && strcmp(line, version) == 0 ){
-			printf("start found\n");
 			break;
 		}else{
 			line = NULL;
 			start++; //skips /n
 		}
 	}
-	printf("version: %s\n", version);
-	printf("startline(%d) %s\n", start, line);
 	int end = start; line = NULL;
 	while( end < datalen ){
 		while( end <datalen && history[end] != '\n' ){
@@ -231,7 +223,6 @@ void serverRollback(struct node * dataList, int sockfd) {
 			end++;
 		}
 		if( line != NULL && strcmp(line, nextVers) == 0 ){
-			printf("end found\n");
 			break;
 		}else{
 			line = NULL;
@@ -239,19 +230,15 @@ void serverRollback(struct node * dataList, int sockfd) {
 		}
 
 	}
-	printf("nextVers: %s\n", nextVers);
-	printf("endline(%d): %s\n", end, line);
 
 	char* substr;
 	start=start+1; end=end-1;
 	if( start >= end ){
 		substr = NULL;
-		printf("null\n");
 	}else{
 		substr = (char*)malloc((end-start+1)*sizeof(char));
 		memcpy(substr, &history[start], end-start);
 		substr[end-start] = '\0';
-		printf("%s\n", substr);
 	}
 
 	//destory original dir
@@ -270,7 +257,6 @@ void serverRollback(struct node * dataList, int sockfd) {
 	}
 	close(fileFD);
 
-	//TODO - Remove all files in .archive >= the rollback version
 	i = atoi(version);
 	char * archiveFile = getPath("./.",pname);
 	archiveFile = getPath(archiveFile,ARCHIVE);
@@ -279,13 +265,9 @@ void serverRollback(struct node * dataList, int sockfd) {
 		archiveFile = getPath(archiveFile,ARCHIVE);
 		archiveFile = getPath(archiveFile, int2str(i));
 		archiveFile = append(archiveFile,".gz");
-
-		char * command = append("rm ", archiveFile);
-		printf("command: %s\n",command);
-		system(command);
+		remove(archiveFile);
 		i++;
 	}
-
 
 	//send to client a success msg
 	sendData(sockfd, makeMsg("rollback", "success", "Project rolled back"));
@@ -321,9 +303,7 @@ void serverDestroy(char* projectname, int sockfd) {
 	}
 	char * archivePath = append("./.",projectname);
 	destroyRecursive(projectPath);
-	//printf("archPath: %s\n",archivePath);
 	destroyRecursive(archivePath);
-
 
 	//remove mutex for the project
 	struct mutexNode* ptr = mutexList;
@@ -377,43 +357,34 @@ void serverCheckout(char* projectname, int sockfd) {
 }
 
 void serverCommit(struct node* dataList, int sockfd){
-	printf("server382\n");
 	char* projectPath = getPath(".", dataList->PROJECTNAME);
 
 	//sends manifest, fails if project or manifest not found
 	if(serverSendManifest(dataList, sockfd)==0){
 		return;
 	}
-	printf("server389\n");
 	dataList = receiveData(sockfd); //gets the new commit data
-	printf("server391\n");
 	//count num of active commits in .commit folder
 	char* commitFolderPath = getPath(projectPath, COMMIT);
 	int countFiles = 1;
-	printf("server395\n");
 	DIR* dir = opendir(commitFolderPath);
-	printf("server397\n");
 	struct dirent* entry;
 	while((entry=readdir(dir)) != NULL ){
-		printf("server400\n");
 		if(entry->d_type == DT_REG){
 			countFiles++;
 		}
 	}
-	printf("server405\n");
 	closedir(dir);
-	printf("server293\n");
+
 	//create a new commit in .commit folder
 	int commitFD = createFile(getPath(commitFolderPath, int2str(countFiles)));
 	char* writeout = dataList->FIRSTFILENODE->content;
 	write(commitFD, writeout, strlen(writeout));
 	close(commitFD);
 	sendData(sockfd, makeMsg("commit", "Success", "Commit successfully saved in server"));
-	printf("server299\n");
 }
 
 void writeHistory(struct manifestNode * newCommits, int newVersion, char * projectpath) {
-	//printf("server 304\n");
 	char * historyPath = getPath(projectpath, HISTORY);
 
 	int historyFD = open(historyPath, O_WRONLY|O_APPEND);
@@ -421,7 +392,6 @@ void writeHistory(struct manifestNode * newCommits, int newVersion, char * proje
 	write(historyFD, "\n", 1);
 	write(historyFD, versionNum, strlen(versionNum));
 	close(historyFD);
-	//printf("server311\n");
 
 	struct manifestNode * ptr = newCommits->next;
 	while (ptr!=NULL) {
@@ -434,7 +404,6 @@ void serverPush(struct node* dataList, int sockfd){
 
 	char* projectPath = getPath(".", dataList->PROJECTNAME);
 	char* dataPath = getPath(".", append(".", dataList->PROJECTNAME));
-	//printf("dataPath: %s\n", dataPath);
 
 	pthread_mutex_t mutex = getMutex(dataList->PROJECTNAME, mutexList)->mutex;
 	pthread_mutex_lock(&mutex); //locks project
@@ -481,20 +450,13 @@ void serverPush(struct node* dataList, int sockfd){
 
 	//use zlib to compress project into .archive
 	char* archivePath = getPath(dataPath, ARCHIVE);
-	//printf("archivePath: %s\n", archivePath);
 	char* compressPath = getPath(archivePath, append(int2str(versionNum),".gz"));
-	//printf("server390\n");
 	compressProject(dataList->PROJECTNAME, compressPath);
-	//printf("server392\n");
 
 	//remove all deleted commits from list of commits
-	//printf("Server: parse cList\n");
 	struct manifestNode* cList = parseManifest(dataList->FIRSTFILENODE->content);
 	struct manifestNode* cPtr = cList->next;
-	//printf("server397\n");
 	while( cPtr != NULL ){
-		//printf("server399\n");
-		//printf("cPtr->path: %s\n", cPtr->path);
 		//remove all deleted commits from list of commits
 		if(strcmp(cPtr->code, "deleted")==0){
 
@@ -504,7 +466,7 @@ void serverPush(struct node* dataList, int sockfd){
 		}
 		cPtr = cPtr->next;
 	}
-	//printf("server405\n");
+
 	//create/rewrite all the files sent
 	struct node* ptr = dataList->FIRSTFILENODE->next;
 	while( ptr != NULL ){
@@ -548,8 +510,6 @@ void serverPush(struct node* dataList, int sockfd){
 		ptr=ptr->next;
 	}
 
-	//printf("server449\n");
-
 	int newVersion = (mList->version)+1;
 	newVersionFile( newVersion , manPath);
 	mList = mList->next;
@@ -560,9 +520,7 @@ void serverPush(struct node* dataList, int sockfd){
 		mList = mList->next;
 	}
 
-	//printf("server459\n");
 	writeHistory(cList, newVersion ,projectPath);
-	//printf("server462\n");
 
 	sendData(sockfd, versionData("push", dataList->PROJECTNAME, manPath));
 	pthread_mutex_unlock(&mutex); //unlocks
@@ -639,30 +597,24 @@ void serverUpgrade(struct node* dataList, int sockfd){
 		sendData(sockfd, makeMsg("upgrade", "Error", "Project not on server"));
 		return;
 	}
-	printf("server542\n");
 	//read in .update sent from server
 	struct manifestNode* uList = parseManifest(dataList->FIRSTFILENODE->content);
 	char* data = NULL; int count = 0;
 	uList = uList->next;
-	printf("server547\n");
 	//makes data to be sent of all files to be added/updated
 	while( uList != NULL ){
-		//printf("path: %s\n", uList->path);
 		if( strcmp(uList->code, "D")!=0 ){
 			data = appendFileData(data, uList->path);
 			count++;
 		}
 		uList = uList->next;
 	}
-	printf("server557\n");
+
 	//Sends the data to client
 	if( count > 0 ){
-		printf("server663\n");
 		data = appendData(dataHeader("upgrade", "ProjectFileContent", dataList->PROJECTNAME, count), data);
 		sendData(sockfd, data);
 	}else{
-		printf("server667\n");
 		sendData(sockfd, makeMsg("upgrade", "Success", "Delete everything in upgrade"));
 	}
-	printf("server668\n");
 }

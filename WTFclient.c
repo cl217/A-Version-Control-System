@@ -43,85 +43,113 @@ int main( int argc, char** argv ){
 	signal(SIGINT, exitSignalHandler);
 
 	if( argc < 2 ){
-		printf("invalid args\n"); return 0;
+		printf("Invalid arguments\n"); 
+		printf("Usage: ./WTF <command>\n");
+		return 0;
 	}
 
 	//  ./WTF randomargv2 for client-server connection test
 	if(strcmp(argv[1], "configure")==0){ // ./WTF configure <IP> <port>
 		if(argc != 4){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <IP> <port>\n");
+			return 0;
 		}else{
 			wtfconfigure(argv[2], argv[3]);
 		}
 	}else if(strcmp(argv[1], "checkout")==0){
 		if(argc != 3){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <projectname>\n");
+			return 0;		
 		}else{
 			wtfcheckout(argv[2]);
 		}
 	}else if(strcmp(argv[1], "update")==0){
 		if(argc != 3){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <projectname>\n");
+			return 0;		
 		}else{
 			wtfupdate(argv[2]);
 		}
 	}else if(strcmp(argv[1], "upgrade")==0){
 		if(argc != 3){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <projectname>\n");
+			return 0;
 		}else{
 			wtfupgrade(argv[2]);
 		}
 	}else if(strcmp(argv[1], "commit")==0){
 		if(argc != 3){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <projectname>\n");
+			return 0;
 		}else{
 			wtfcommit(argv[2]);
 		}
 	}else if(strcmp(argv[1], "push")==0){
 		if(argc != 3){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <projectname>\n");
+			return 0;
 		}else{
 			wtfpush(argv[2]);
 		}
 	}else if(strcmp(argv[1], "create")==0){
 		if(argc != 3){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <projectname>\n");
+			return 0;
 		}else{
 			wtfcreate(argv[2]);
 		}
 	}else if(strcmp(argv[1], "destroy")==0){
 		if(argc != 3){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <projectname>\n");
+			return 0;
 		}else{
 			wtfdestroy(argv[2]);
 		}
 	}else if(strcmp(argv[1], "add")==0){
 		if(argc != 4){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <projectname> <file>\n");
+			return 0;
 		}else{
 			wtfadd(argv[2], argv[3]);
 		}
 	}else if(strcmp(argv[1], "remove")==0){
 		if(argc != 4){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <projectname> <file>\n");
+			return 0;
 		}else{
 			wtfremove(argv[2], argv[3]);
 		}
 	}else if(strcmp(argv[1], "currentversion")==0){
 		if(argc != 3){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <projectname>\n");
+			return 0;
 		}else{
 			wtfcurrentversion(argv[2]);
 		}
 	}else if(strcmp(argv[1], "history")==0){
 		if(argc != 3){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <projectname>\n");
+			return 0;
 		}else{
 			wtfhistory(argv[2]);
 		}
 	}else if(strcmp(argv[1], "rollback")==0){
 		if(argc != 4){
-			printf("invalid args\n"); return 0;
+			printf("Invalid arguments\n"); 
+			printf("Usage: ./WTF <command> <projectname> <version>\n");
+			return 0;
 		}else{
 			wtfrollback(argv[2], argv[3]);
 		}
@@ -167,13 +195,11 @@ void wtfconnect(){
 	if(sockfd<0){
 		printf("Error: can't open socket\n"); exitHandler();
 	}
-	//printf("Status: new client created\n");
 
 	//FIND HOST
 	if(server==NULL){
 		printf("Error: IP not found\n"); exitHandler();
 	}
-	//printf("Status: host found\n");
 
 	//Connection setup
 	struct sockaddr_in serverAddr;
@@ -387,7 +413,6 @@ void wtfadd( char* projectname, char* filename ){
 
 /*
 	Removes targeted file from the client side manifest
-	TODO: tag it as removed?
 */
 void wtfremove(char * projectname, char * filename) {
 
@@ -512,10 +537,12 @@ void wtfupdate( char* projectname ){
 	if( existConflict == 1 ){
 		printf("Error: can't update, fix conflicts and try again\n");
 		remove(updatePath);
+		return;
 	}
 	if( isEmpty == 1 ){
 		printf("Error: Project is already up to date\n");
 		close(createFile(updatePath));
+		return;
 	}
 
 	printf("Status: update successful\n");
@@ -556,22 +583,17 @@ void wtfupgrade( char* projectname ){
 	wtfconnect(); //connects, shuts down if can't
 
 	//sends the update list to server
-	printf("client559\n");
 	sendData(sockfd, versionData("upgrade", projectname, updatePath));
-	printf("client561\n");
 	struct node* dataList = receiveData(sockfd); //receives data from server
-	printf("client563\n");
 
 	//Errorcheck-project not on server
 	if( strcmp(dataList->next->name, "Error")==0 ){
 		printf("Error: %s\n", dataList->next->content);
 		exitHandler();
 	}
-	printf("client570\n");
 	//read in client's manifest and update file
 	struct manifestNode* mList = parseManifest(readFileData(manPath));
 	struct manifestNode* uList = parseManifest(readFileData(updatePath));
-	printf("client574\n");
 	//delete all files labeled as deleted on .update
 	struct manifestNode* uPtr = uList->next;
 	while( uPtr != NULL ){
@@ -583,15 +605,10 @@ void wtfupgrade( char* projectname ){
 		}
 		uPtr = uPtr->next;
 	}
-	printf("client586\n");
-	printf("%s\n", dataList->next->name);
 	if( strcmp(dataList->next->name, "Success")!=0 ){ //if not already done
-		printf("client588\n");
 		//create/rewrite all files received from server
 		struct node* ptr = dataList->FIRSTFILENODE;
 		while( ptr != NULL ){
-			printf("client593\n");
-			printf("%s\n", ptr->name);
 			int fd = open( ptr->name, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 			if( fd<0 ){ //can't open, file in subdirectories that havent been created
 				char* tempPath = (char*)malloc((strlen(ptr->name)+1)*sizeof(char));
@@ -603,11 +620,9 @@ void wtfupgrade( char* projectname ){
 					return;
 				}
 			}
-			printf("client606\n");
 			//update manifest
 			struct manifestNode* uNode = findFile(ptr->name, uList);
 			struct manifestNode* mNode = findFile(ptr->name, mList);
-			printf("client610\n");
 			if( mNode == NULL ){ //if new file to be created
 				struct manifestNode* addThis = (struct manifestNode*)malloc(1*sizeof(struct manifestNode));
 				addThis->code = "uptodate";
@@ -617,7 +632,6 @@ void wtfupgrade( char* projectname ){
 				addThis->next = mList->next;
 				mList->next = addThis;
 			}else{ //if existing file to be updates
-				printf("client620\n");
 				mNode->code = "uptodate";
 				mNode->version = uNode->version;
 				mNode->hash = uNode->hash;
@@ -630,7 +644,6 @@ void wtfupgrade( char* projectname ){
 			ptr=ptr->next;
 		}
 	}
-	printf("client628\n");
 	//write out updates manifest
 	newVersionFile( uList->version, manPath);
 	mList = mList->next;
@@ -640,7 +653,6 @@ void wtfupgrade( char* projectname ){
 		}
 		mList = mList->next;
 	}
-	printf("client638\n");
 	remove(getPath(projectPath, UPDATE)); //removes .update
 	printf("Status: upgrade successful\n");
 }
@@ -721,7 +733,6 @@ void wtfcommit( char* projectname ){
 	}
 	//send commit to server
 	sendData(sockfd, versionData("commit", projectname, commitPath));
-	printf("client712: commit sent to server\n");
 	dataList = receiveData(sockfd);
 	if( strcmp(dataList->next->name, "Success")==0 ){
 		printf("Status: %s\n", dataList->next->content);
@@ -813,8 +824,6 @@ void wtfcurrentversion( char* projectname ){
 	struct manifestNode * manList = parseManifest(data->FIRSTFILENODE->content);
 	struct manifestNode * ptr = manList->next;
 
-	printf("Current Version: %d\n", manList->version);
-
 	while (ptr!=NULL) {
 		char * file = append("File: ",ptr->path);
 		char * version = append("\tVersion: ", int2str(ptr->version));
@@ -843,7 +852,6 @@ void wtfhistory( char* projectname ){
 }
 
 //	4.1
-
 /*
 	Find the version tar file in ./projectname/archive
 	Use system("tar xvzf <thetarfile>") to extract tar

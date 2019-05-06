@@ -27,11 +27,6 @@ int sendData( int fd, char* data ){
 	int code = receiveConfirmation(fd); //get confirmation
 	
 	int size = strlen(data)+1; //includes null term
-	
-	//printf("Sending: %s\n", data);
-	//printf("SendingDataSize: %d\n", size); 
-	//printf("SendingCompSize: %d\n", sizeCompressed);	
-	//printf("SendingCompData: %s\n", compressedData);
 		
 	write(fd, &size, sizeof(int)); //send size of regular data
 	code = receiveConfirmation(fd); //get confirmation
@@ -60,10 +55,6 @@ struct node* receiveData( int fd ){
 	read(fd, &data, compressedSize);
 	sendConfirmation(fd, 1);
 
-	//printf("RecievingDataSize: %d\n", dataSize); 
-	//printf("RecievingCompSize: %d\n", compressedSize);	
-	//printf("RecievingCompData: %d\n", data);
-
 	//EC- decompress data and pass into splitData
 	char* decompressedData = (char*)malloc((dataSize)*sizeof(char)); //includes null
 
@@ -80,8 +71,6 @@ struct node* receiveData( int fd ){
 	inflateInit(&infstream);
 	inflate(&infstream, Z_NO_FLUSH);
 	inflateEnd(&infstream);
-	
-	//printf("Receiving: %s\n", decompressedData);
 	
 	return splitData(decompressedData);
 }
@@ -257,6 +246,5 @@ void sendCommandProject( int sockfd, char* command, char* projectname ){
 	char * data = appendData(command, "Project"); //command, dataType
 	data = appendData(data, int2str(strlen(projectname))); //bytesPname
 	data = appendData(data, projectname); //projectName
-	//printf("Sending to server: %s\n", data);
 	sendData(sockfd, data);
 }
