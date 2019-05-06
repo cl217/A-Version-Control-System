@@ -4,7 +4,7 @@ CS214 Asst3 WTF
 	Files:
 		WTFserver - Server Side 
 		WTF - Client Side
-		WTFTest - Client Side
+		WTFTest
 		
 	To start the program, run "make test" on the command line. This generates the following basic file structure:
 	
