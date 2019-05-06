@@ -75,5 +75,131 @@ rollback and history, then destroy the project.
   ./WTF destroy p1 //Project is successfully destroyed on the server
 
   /*Following is printed on the client side*/
-  
+
   Status:project succesfully destroyed on server
+
+Test 2: Test creating a project with multiple subdirectories, test checkout
+update, upgrade, and checkout commands
+
+  Test Upload:
+  A project with the following directory structure was successfully created,
+  commited, and pushed to the server
+
+  p1
+  |--test2.txt
+  |--sub1
+      |--test1.txt
+      |--sub2
+          |--test3.txt
+
+  The project is removed from the client side and the checkout command is tested
+
+  ./WTF checkout p1
+
+  This works as intended and creates a copy of the project on the client side
+
+  Add 'test.txt' to the p1 directory and call update
+
+  p1
+  |--test2.txt
+  |--test4.txt
+  |--sub1
+      |--test1.txt
+      |--sub2
+          |--test3.txt
+
+  ./WTF update p1
+
+  /*The following is printed to STDOUT*/
+
+  U ./p1/test4.txt
+  Status: update successful
+
+
+  Testing Modify:
+  -Create 2 clients, c1 and c2
+  -In c1, create a project p1 containing a 'test.txt' that contains the
+   following: "test file", commit and push this to the server
+  -In c2, checkout p1, edit the contents of 'test.txt'. commit and push.
+  -In c1 call update:
+
+  ./WTF update p1
+
+  /*The following is printed to STDOUT*/
+  M ./p1/test.txt
+  Status: update successful
+
+
+  Testing Upgrade:
+  -In c1, the server has a more up to date version of the project, calling
+  upgrade at this point upgrades the 'test.txt' to the same version present on
+  the server.
+
+  Test Remove:
+   -On client c1 call remove:
+   ./WTF remove p1 test.fileText
+
+   /*Following is printed to STDOUT*/
+   Status: file succesfully removed from manifest
+
+   -commit and push to server
+   -On client c2 call update:
+   ./WTF update p1
+
+   /*Following is printed to STDOUT*/
+   D ./p1/test.txt
+   Status: update successful
+
+  Test Add:
+  -In client c1, add test.txt, commit, and push.
+  -In client c2, call update:
+
+  ./WTF update p1
+
+  /*The following is printed to STDOUT*/
+  A ./p1/test.txt
+  Status: update successful
+
+Test 3: Rest of the Commands
+
+  Current Version (called in client c1 above)
+  ./WTF currentversion p1
+
+  /*Following is printed to STDOUT*/
+  Current Version: 5
+  File: ./p1/test.txt	Version: 1
+
+  History:
+  ./WTF history p1
+
+  /*Following is printed to STDOUT*/
+  History:
+  1
+  2
+  upload	1	./p1/test.txt	0181d93fee60b818e3f92e470ea97a2aff4ca56a
+  3
+  upload	2	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
+  4
+  deleted	3	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
+  5
+  upload	1	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
+
+  Rollback: (roll it back to version 3 and then check to see if history was
+  appended properly)
+
+  ./WTF rollback p1 3
+  ./WTF history p1
+
+  /*Following is printed to STDOUT*/
+  History:
+  1
+  2
+  upload	1	./p1/test.txt	0181d93fee60b818e3f92e470ea97a2aff4ca56a
+  3
+  upload	2	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
+  4
+  deleted	3	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
+  5
+  upload	1	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
+  3 rollback
+  upload	2	./p1/test.txt	c568aba70fd26962098b608d362d67e79df3cda6
