@@ -1,6 +1,4 @@
-Systems Programming Project 3
-
-WTF: Where's the File
+WTF: Where's the File (Systems Programming Project 3)
 
 A version control system similar to Git.
 
