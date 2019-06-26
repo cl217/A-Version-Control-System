@@ -1,27 +1,31 @@
+Systems Programming Project 3
+
+WTF: Where's the File
+
 A version control system similar to Git.
 
 Design:
-	• Client and Server
+	â€¢ Client and Server
 		- The server maintains a repository of projects.
 		- Server also maintains all previous versions of all projects in compressed .gz files.
 		- The client fetch updates to and from the server's repository.
 		- The data sent between client and server is compressed using zlib
 		
-	• Synchronization
+	â€¢ Synchronization
 		- The server is a multithreaded program capable of any number of client connections at a time.
 		- Mutexes are used to insure data consistency.
 
 Usage:
-	• Makefile
+	â€¢ Makefile
 		- make all: builds two executables
 			- WTFserver (server)
 			- WTF (client)
 	
-	• Server
+	â€¢ Server
 		- Start up server
 			./WTFserver <port> 
 	
-	• Client
+	â€¢ Client
 
 		- Configure: Saves the IP address/hostname and port of the server for use by later commands that connects to the server
 			./WTF configure <IP/hostname> <port>
